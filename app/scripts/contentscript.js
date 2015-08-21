@@ -8,6 +8,7 @@
 
      this.start = function(){
         pageHandler();
+        eventHandler();
      }
 
      function pageHandler() {
@@ -22,6 +23,15 @@
                 break;
          }
 
+     }
+
+     function eventHandler(){
+         console.log('control key not pressed');
+         $(document).on('keydown', function(e){
+             if(e.ctrlKey){
+                 console.log('control key pressed');
+             }
+         })
      }
 
      function handleFacebook(){

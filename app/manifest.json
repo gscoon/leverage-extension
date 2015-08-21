@@ -30,8 +30,9 @@
         "https://*/*"
       ],
       "js": [
-        "scripts/jquery.js"
-        "scripts/contentscript.js",
+        "scripts/jquery.js",
+        "scripts/jPulse.js",
+        "scripts/contentscript.js"
       ],
       "run_at": "document_end",
       "all_frames": false
