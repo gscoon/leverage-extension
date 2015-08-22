@@ -1,10 +1,92 @@
 'use strict';
 
-chrome.runtime.onInstalled.addListener(function (details) {
-  console.log('previousVersion', details.previousVersion);
-});
+var bg = new function(){
+    // extension ID
+    this.extID = null;
+    var socket = null;
 
-chrome.browserAction.setBadgeBackgroundColor({color: '#3cb73e'});
-chrome.browserAction.setBadgeText({text: 'GS'});
+    window.onload = start.bind(this);
 
-console.log('\'Allo \'Allo! Event Page for Browser Action');
+    function start(){
+        console.log('Ext Loaded');
+        chrome.storage.sync.get('extID', storageCallback.bind(this));
+    }
+
+    var serverURL = 'http://localhost:1111/';
+
+    chrome.runtime.onInstalled.addListener(function (details) {
+        console.log('previousVersion', details.previousVersion);
+    });
+
+    function startSocket(){
+        var self = this;
+        socket = io(serverURL);
+        var isConnected = false;
+        socket.on('connect', function(){
+            if(isConnected) return false;
+
+            isConnected = true;
+            console.log('socket connected');
+            socket.emit('extID', self.extID);
+
+            // listen for user information based on extension id
+            socket.on('user', handleUserResults);
+            socket.on('auth_status', handleAuthUpdate);
+        });
+
+        function handleUserResults(data){
+            console.log('user results: ', data);
+            if(data.length == 0){
+                self.showFacebookAuth();
+            }
+        }
+
+        function handleAuthUpdate(data){
+            console.log('handleAuthUpdate: ', data);
+        }
+    }
+
+    // random badge stuff
+    chrome.browserAction.setBadgeBackgroundColor({color: '#3cb73e'});
+    chrome.browserAction.setBadgeText({text: 'GS'});
+
+    this.showFacebookAuth = function(){
+        chrome.windows.create({
+            'url': serverURL + 'auth/pre-fb?extID=' + this.extID,
+            'type': 'popup',
+            width:700,
+            height:700
+        }, function(pWindow) {
+            console.log('Pop pop');
+        });
+    }
+
+    function storageCallback(ret){
+        var self = this;
+        var extID = ret.extID;
+        if(extID){
+            this.extID = extID;
+            console.log('extension id pulled: ', self.extID);
+            startSocket.apply(self);
+            return true;
+        }
+
+        this.extID = genRandomID(15);
+        chrome.storage.sync.set({extID: this.extID}, function() {
+            startSocket.apply(self);
+            console.log('extension id saved: ', self.extID);
+        });
+
+    }
+
+    function genRandomID(len){
+        var text = '';
+        var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+        for( var i=0; i < len; i++ )
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+        return text;
+    }
+
+}

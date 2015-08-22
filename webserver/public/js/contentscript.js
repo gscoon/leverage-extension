@@ -30,6 +30,9 @@
 
      function eventHandler(){
 
+         $(document).on('click', '#general_overlay', function(e){
+             $(this).hide();
+         });
         //  $(document).on('click', 'a.disabled' , function(e) {
         //      //alert('disabled called');\
         //      //e.preventDefault();
@@ -68,13 +71,6 @@
          });
      }
 
-     function handleFacebook(){
-         console.log('handleFacebook');
-     }
-
-     function handleInstagram(){
-         console.log('handleInstagram');
-     }
 
 
      function test(){
@@ -104,35 +100,45 @@
                     zIndex: 99999999999999999
                 };
 
-                target.jPulse(options);
+
 
                 console.log(dims);
                 console.log(options);
 
 
-                showLevMenu();
+                showLevMenu(e.pageY, function(){
+                    target.jPulse(options);
+                });
+
                 captureElement(target);
 
-            //  {
-            //     color: "#993175",
-            //     size: 120,
-            //     speed: 2000,
-            //     interval: 400,
-            //     left: 0,
-            //     top: 0,
-            //     zIndex: -1
-            // }
+                //  {
+                //     color: "#993175",
+                //     size: 120,
+                //     speed: 2000,
+                //     interval: 400,
+                //     left: 0,
+                //     top: 0,
+                //     zIndex: -1
+                // }
          });
 
      }
 
 
-     function showLevMenu(){
+     function showLevMenu(h, callback){
          console.log('lev menu', $('#lev_menu').length);
-         if ($('#lev_menu').length == 0)
-            $('body').append('<div id="lev_menu"></div>');
+         if ($('#lev_menu').length == 0){
+             $('body').append('<div id="lev_menu"></div><div id="general_overlay"></div>');
+         }
 
-         $('#lev_menu').slideDown(300);
+         $('#general_overlay').show();
+
+         $('html, body').animate({
+            scrollTop: h - 100
+        }, 500, callback);
+
+        // $('#lev_menu').slideDown(300);
      }
 
     function captureElement(target){
@@ -144,18 +150,7 @@
         });
     }
 
-     function returnDimensions(c){
-         return {
-             w: c.innerWidth(),
-             h: c.innerHeight(),
-             ol: c.offset().left,
-             ot: c.offset().top,
-             opl: c.parent().offset().left,
-             opt: c.parent().offset().top,
-         };
-     }
-
-     function convertImgToBase64URL(url, outputFormat, callback){
+    function convertImgToBase64URL(url, outputFormat, callback){
         var img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = function(){
@@ -170,4 +165,24 @@
         };
         img.src = url;
     }
+
+    function returnDimensions(c){
+        return {
+        w: c.innerWidth(),
+        h: c.innerHeight(),
+        ol: c.offset().left,
+        ot: c.offset().top,
+        opl: c.parent().offset().left,
+        opt: c.parent().offset().top,
+        };
+    }
+
+    function handleFacebook(){
+        console.log('handleFacebook');
+    }
+
+    function handleInstagram(){
+        console.log('handleInstagram');
+    }
+
  }

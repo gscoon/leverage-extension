@@ -1,3 +1,9 @@
 'use strict';
 
-console.log('\'Allo \'Allo! Popup');
+var bg = chrome.extension.getBackgroundPage().bg;
+
+window.onload = function(){
+    $('#login').on('click', function(){
+        bg.showFacebookAuth();
+    });
+};
