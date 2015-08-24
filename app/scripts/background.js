@@ -36,6 +36,7 @@ var bg = new function(){
         var self = this;
         socket = io(serverURL);
         var isConnected = false;
+        
         socket.on('connect', function(){
             if(isConnected) return false;
 
@@ -46,6 +47,7 @@ var bg = new function(){
             // listen for user information based on extension id
             socket.on('user', handleUserResults.bind(self));
             socket.on('auth_status', handleAuthUpdate.bind(self));
+            socket.on('content', handleContent.bind(self));
         });
 
         function handleUserResults(data){
@@ -60,6 +62,13 @@ var bg = new function(){
             console.log('handleAuthUpdate: ', data);
             //close auth window
             chrome.windows.remove(this.authWindow.id);
+            setTimeout(function(){
+                socket.emit('get_content', self.extID);
+            }, 1000);
+        }
+
+        function handleContent(data){
+            console.log(data);
         }
     }
 
