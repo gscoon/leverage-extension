@@ -13,7 +13,9 @@
             "scripts/jquery.js",
             "scripts/chromereload.js",
             "scripts/socket.io.js",
-            "scripts/background.js"
+            "scripts/background.js",
+            "scripts/html2canvas.js",
+            "scripts/html2canvas.svg.js"
         ]
     },
     "browser_action": {

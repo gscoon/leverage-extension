@@ -12,9 +12,18 @@ var bg = new function(){
         console.log('previousVersion', details.previousVersion);
     });
 
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        console.log(request, sender);
+        console.log(sender.tab ?
+                    "from a content script:" + sender.tab.url :
+                    "from the extension");
+        if (request.action == "capture")
+            sendResponse({farewell: "gotcha"});
+  });
+
     // random badge stuff
-    chrome.browserAction.setBadgeBackgroundColor({color: '#3cb73e'});
-    chrome.browserAction.setBadgeText({text: 'GS'});
+    //chrome.browserAction.setBadgeBackgroundColor({color: '#3cb73e'});
+    //chrome.browserAction.setBadgeText({text: 'GS'});
 
     function start(){
         console.log('Ext Loaded');

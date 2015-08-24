@@ -77,7 +77,7 @@
 
          var target = null;
 
-         $(window).on('click', function(e){
+         $(document).on('click', function(e){
                 if(!ctrKeyPressed)
                     return false;
 
@@ -88,29 +88,25 @@
 
                 var dims = returnDimensions(target);
 
-                var relX = e.pageX - dims.ol;
-                var relY = e.pageY - dims.ot;
+                var rel = {x: (e.pageX - dims.ol), y:(e.pageY - dims.ot)}
                 var spacingLeft = (dims.ol - dims.opl);
                 var spacingTop = (dims.ot - dims.opt);
 
                 var options = {
-                    left: -1 * (dims.w/2) + spacingLeft + relX,
-                    top: -1 * (dims.h/2) + relY,
+                    left: -1 * (dims.w/2) + spacingLeft + rel.x,
+                    top: -1 * (dims.h/2) + rel.y,
                     interval: 400,
                     zIndex: 99999999999999999
                 };
 
-
-
-                console.log(dims);
-                console.log(options);
-
-
                 showLevMenu(e.pageY, function(){
                     target.jPulse(options);
+                    setTimeout(function(){
+                        //captureElement(target);
+                    }, 2000);
                 });
 
-                captureElement(target);
+                //captureElement(target);
 
                 //  {
                 //     color: "#993175",
@@ -127,12 +123,14 @@
 
 
      function showLevMenu(h, callback){
-         console.log('lev menu', $('#lev_menu').length);
-         if ($('#lev_menu').length == 0){
+         //console.log('lev menu', $('#lev_menu').length);
+         if ($('#lev_menu').length == 0)
              $('body').append('<div id="lev_menu"></div><div id="general_overlay"></div>');
-         }
 
-         $('#general_overlay').show();
+         var menu = $('#lev_menu');
+         menu.css('top', h + 100).show();
+
+         //$('#general_overlay').show();
 
          $('html, body').animate({
             scrollTop: h - 100
@@ -144,7 +142,7 @@
     function captureElement(target){
         html2canvas(target[0], {
             onrendered: function(canvas) {
-                $('#lev_menu').html(canvas);
+                //$('#lev_menu').html(canvas);
             // canvas is the final rendered <canvas> element
             }
         });
@@ -168,12 +166,12 @@
 
     function returnDimensions(c){
         return {
-        w: c.innerWidth(),
-        h: c.innerHeight(),
-        ol: c.offset().left,
-        ot: c.offset().top,
-        opl: c.parent().offset().left,
-        opt: c.parent().offset().top,
+            w: c.innerWidth(),
+            h: c.innerHeight(),
+            ol: c.offset().left,
+            ot: c.offset().top,
+            opl: c.parent().offset().left,
+            opt: c.parent().offset().top,
         };
     }
 

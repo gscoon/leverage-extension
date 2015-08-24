@@ -1,15 +1,25 @@
 'use strict';
 
  window.onload = function(){
-     //lev.start();
+     lev.start();
  }
 
  var lev = new function(){
 
-    //  this.start = function(){
-    //     pageHandler();
-    //     eventHandler();
-    //  }
+     this.start = function(){
+         console.log('content script started');
+        // pageHandler();
+        // eventHandler();
+
+        $(window).on('click', function(e){
+            var target = $(e.target);
+            chrome.runtime.sendMessage({action: "capture", target: target}, function(response) {
+                console.log('response', response);
+            });
+        });
+    }
+
+
      //
     //  function pageHandler() {
     //      switch(window.location.hostname){
