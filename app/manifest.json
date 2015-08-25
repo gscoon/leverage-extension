@@ -13,9 +13,7 @@
             "scripts/jquery.js",
             "scripts/chromereload.js",
             "scripts/socket.io.js",
-            "scripts/background.js",
-            "scripts/html2canvas.js",
-            "scripts/html2canvas.svg.js"
+            "scripts/background.js"
         ]
     },
     "browser_action": {
@@ -36,7 +34,12 @@
             "js": [
                 "scripts/jquery.js",
                 "scripts/jPulse.js",
-                "scripts/contentscript.js"
+                "scripts/contentscript.js",
+                "scripts/html2canvas.js",
+                "scripts/html2canvas.svg.js"
+            ],
+            "css": [
+                "styles/style.css"
             ],
             "run_at": "document_end",
             "all_frames": false
