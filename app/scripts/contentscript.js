@@ -39,7 +39,6 @@ var lev = new function(){
         console.log('content script started');
 
         setTagMenu();
-        setPageHandlers();
         setEventHandlers();
 
         var generic = $('meta[property="og:image"]');
@@ -52,28 +51,36 @@ var lev = new function(){
     function setTagMenu(){
         pulse.menu = $('#tag_menu');
         if (pulse.menu.length == 0)
-            $.get(processURL + 'tag_menu', function(data){
-                $('body').append(data);
+            // ask the background script for the menu
+            chrome.runtime.sendMessage({action: "menu"}, function(response) {
+                // add menu to html body
+                $('body').append(response.menu);
                 pulse.menu = $('#tag_menu');
                 $('#x').on('click', closePulse).css('zIndex', z.menuX);
-                $('#chain_selection_row a').on('click', saveTagChain);
+
+                // save chain when these anchors are clicked
+                $('#chain_selection_row a.chain_selection_option, a.chain_menu_expanded_list_option').on('click', saveTagChain);
                 pulse.user.imgSmall = $('#pulse_user_image').attr('src');
                 pulse.pointer = $('#pulse_pointer');
-            });
-    }
 
-     //
-    function setPageHandlers() {
-         switch(window.location.hostname){
-             case 'www.facebook.com':
-             case 'facebook.com':
-                handleFacebook();
-                break;
-            case 'www.instagram.com':
-            case 'instagram.com':
-                handleInstagram();
-                break;
-         }
+                // show more chain when ... is clicked
+                $('#more_chain').on('click', function(){
+                    $('#chain_menu_expanded_list').show();
+                    $('#chain_menu_expanded').slideDown(300);
+                });
+
+                // show the new chain menu
+                $('#chain_menu_expanded_new_button').on('click', showNewChainMenu);
+
+                // save new chain
+                $('#chain_menu_save_new_button').on('click', saveNewChain);
+
+                // cancel new
+                $('#chain_menu_cancel_new_button').on('click', cancelNewChain)
+
+                // cancel chain
+
+            });
     }
 
     function setEventHandlers(){
@@ -188,11 +195,15 @@ var lev = new function(){
         $('body').animate({
             scrollTop: y - 100
         }, 500, function(){
+            hideAllMenuContainers();
             $('#tag_menu_content').show();
-            $('#tag_menu_who, #tag_menu_preview, #tag_menu_chain').hide();
             pulse.menu.hide().css(menuPos).fadeIn(300, showMessageMenu);
             callback();
         });
+    }
+
+    function hideAllMenuContainers(){
+        $('#tag_menu_content, #tag_menu_chain, #tag_menu_preview, #tag_menu_who, #tag_menu_load_page, #chain_menu_expanded').hide();
     }
 
 
@@ -292,9 +303,10 @@ var lev = new function(){
     }
 
     function showChainMenu(){
+        hideAllMenuContainers();
         $('#tag_menu_chain').fadeIn(300);
         $('#pp_icon').attr('class', 'pp_chain');
-        $('#tag_menu_content, #tag_menu_preview, #tag_menu_who, #tag_menu_load_page').hide();
+
     }
 
     function saveTagChain(tID){
@@ -320,6 +332,78 @@ var lev = new function(){
         });
 
         console.log('tID', tID);
+    }
+
+    // stuff dealing with new chain menu
+
+    function showNewChainMenu(){
+        $('#chain_menu_expanded_list, #chain_menu_expanded_select').hide();
+        $('#chain_menu_expanded_new').fadeIn(300);
+        $('#chain_menu_expanded_new_name').focus();
+    }
+
+    function saveNewChain(){
+        var chainName = $.trim($('#chain_menu_expanded_new_name').val());
+        if(chainName.length < 1)
+            return alert("Must be at least one character.")
+
+        var req = {action: "socket", message: 'save_new_chain', chainName: chainName};
+        console.log('save req', req);
+        chrome.runtime.sendMessage(req, function(response) {
+            console.log('save response', response);
+        });
+
+    }
+
+    function cancelNewChain(){
+        $('#chain_menu_expanded_list, #chain_menu_expanded_select').show();
+        $('#chain_menu_expanded_new').hide();
+    }
+
+    function saveTagImages(){
+        console.log('saveTagImages');
+        // 1. save target
+        if(pulse.tagType != 'img'){
+            html2canvas(pulse.target, {
+                background: '#ffffff',
+                onrendered: function(canvas) {
+                    saveTagImageProcess({
+                        str: canvas.toDataURL(),
+                        ext: 'png',
+                        type: 'target',
+                        fileID: pulse.id
+                    });
+                }
+            });
+
+        }
+
+
+        // 2. save generic image
+        if(pulse.genericImgSrc != null){
+            var img = new Image();
+            img.setAttribute('crossOrigin', 'anonymous');
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            img.onload = function(){
+                canvas.width = this.width;
+                canvas.height = this.height;
+                ctx.drawImage(this, 0, 0);
+                saveTagImageProcess({
+                    str: canvas.toDataURL(),
+                    ext: 'png',
+                    type: 'generic',
+                    fileID: pulse.id
+                });
+            }
+            img.src = pulse.genericImgSrc
+        }
+
+    }
+
+    function saveTagImageProcess(saveObj){
+        $.post(processURL + 'save_image', {data: JSON.stringify(saveObj)});
     }
 
     function showWhoMenu(){
@@ -356,12 +440,6 @@ var lev = new function(){
                 createPulsePreview();
                 break;
         }
-    }
-
-    function updateTagNav(whichID){
-        var activeClass = 'tag_menu_title';
-        $('.' + activeClass).removeClass(activeClass);
-        $('#' + whichID).attr('class', activeClass);
     }
 
     function createPulsePreview(){
@@ -489,79 +567,6 @@ var lev = new function(){
         context.fillText(line, x, y);
     }
 
-
-    function saveTagImages(){
-        console.log('saveTagImages');
-        // 1. save target
-        if(pulse.tagType != 'img'){
-            html2canvas(pulse.target, {
-                background: '#ffffff',
-                onrendered: function(canvas) {
-                    saveTagImageProcess({
-                        str: canvas.toDataURL(),
-                        ext: 'png',
-                        type: 'target',
-                        fileID: pulse.id
-                    });
-                }
-            });
-
-        }
-
-
-        // 2. save generic image
-        if(pulse.genericImgSrc != null){
-            var img = new Image();
-            img.setAttribute('crossOrigin', 'anonymous');
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-
-            img.onload = function(){
-                canvas.width = this.width;
-                canvas.height = this.height;
-                ctx.drawImage(this, 0, 0);
-                saveTagImageProcess({
-                    str: canvas.toDataURL(),
-                    ext: 'png',
-                    type: 'generic',
-                    fileID: pulse.id
-                });
-            }
-            img.src = pulse.genericImgSrc
-        }
-
-    }
-
-    function saveTagImageProcess(saveObj){
-        $.post(processURL + 'save_image', {data: JSON.stringify(saveObj)});
-    }
-
-    function handleCustomSelect(option){
-        var customSelect = option.parent().parent();
-
-        var optionText = option.find('.custom_select_val').text();
-        if(optionText!=''){
-            var actionItemText = customSelect.find('.active_item_text');
-            var commentInput = $('#lev_comment_box');
-            var commentPreset = $('#lev_comment_preset');
-            var optionObj = JSON.parse(optionText);
-            if(optionObj.type == 'action'){
-                actionItemText.html('Custom Message:');
-                commentInput.show(200);
-                commentPreset.hide();
-            }
-            else if(optionObj.type == 'text'){
-                commentInput.hide();
-                commentPreset.hide().text(optionObj.val).show(200);
-                actionItemText.html('Preset Message:');
-            }
-            //lev_comment_preset
-        }
-
-        option.parent().hide();
-
-    }
-
     function captureElement(target){
         html2canvas(target[0], {
             onrendered: function(canvas) {
@@ -600,14 +605,6 @@ var lev = new function(){
             canvas = null;
         };
         img.src = url;
-    }
-
-    function handleFacebook(){
-         console.log('handleFacebook');
-    }
-
-    function handleInstagram(){
-         console.log('handleInstagram');
     }
 
     function extend(a, b){

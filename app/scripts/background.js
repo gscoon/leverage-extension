@@ -1,10 +1,12 @@
 'use strict';
 
 var bg = new function(){
-    // extension ID
-    this.extID = null;
+
+    var serverURL = 'http://localhost:1111/';  //used for ajax calls
+    var extID = null;
     var socket = null;
     var authWindow = null;
+    var menuHTML = null;
 
     window.onload = start.bind(this);
 
@@ -12,50 +14,59 @@ var bg = new function(){
         console.log('previousVersion', details.previousVersion);
     });
 
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        console.log(request, sender);
-        console.log(sender.tab ?
-                    "from a content script:" + sender.tab.url :
-                    "from the extension");
-        if (request.action == "capture")
-            sendResponse({farewell: "gotcha"});
-  });
+    chrome.runtime.onMessage.addListener(messageListener.bind(this));
 
-    // random badge stuff
-    //chrome.browserAction.setBadgeBackgroundColor({color: '#3cb73e'});
-    //chrome.browserAction.setBadgeText({text: 'GS'});
+    function messageListener(request, sender, sendResponse) {
+        console.log(request, sender);
+        console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
+
+        if(request.action){
+            if (request.action == "capture")
+                sendResponse({farewell: "gotcha"});
+            else if (request.action == "menu")
+                sendResponse({menu: this.menuHTML});
+            else if (request.action == "socket")
+                sendSocketMessage.call(this, request, sendResponse);
+        }
+    }
 
     function start(){
         console.log('Ext Loaded');
         chrome.storage.sync.get('extID', storageCallback.bind(this));
     }
 
-    var serverURL = 'http://localhost:1111/';
-
     function startSocket(){
         var self = this;
         socket = io(serverURL);
         var isConnected = false;
-        
+
         socket.on('connect', function(){
             if(isConnected) return false;
 
             isConnected = true;
             console.log('socket connected');
             socket.emit('extID', self.extID);
+            socket.emit('get_pulse_menu', self.extID);
 
             // listen for user information based on extension id
+            socket.on('menu', handleMenu.bind(self));
             socket.on('user', handleUserResults.bind(self));
             socket.on('auth_status', handleAuthUpdate.bind(self));
             socket.on('content', handleContent.bind(self));
+
         });
+
+        function handleMenu(data){
+            console.log('menuData', data)
+            this.menuHTML = data.menu;
+        }
 
         function handleUserResults(data){
             console.log('user results: ', data);
             if(data.length == 0){
 
             }
-            this.showFacebookAuth();
+            //this.showFacebookAuth();
         }
 
         function handleAuthUpdate(data){
@@ -70,6 +81,11 @@ var bg = new function(){
         function handleContent(data){
             console.log(data);
         }
+    }
+
+    function sendSocketMessage(req, res){
+        req.extID = this.extID;
+        socket.emit(req.message, req);
     }
 
     this.showFacebookAuth = function(){
