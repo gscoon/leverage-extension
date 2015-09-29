@@ -63,6 +63,12 @@ var lev = new function(){
                 handleMenuResponse(message);
             else if(message.action === 'saved_chain')
                 handleNewChain(message);
+            else if(message.action === 'saved_tag')
+                handleSavedTag(message);
+            else if(message.action === 'saved_tag_text')
+                handleSavedTagText(message);
+            else if(message.action === 'saved_tag_chain')
+                handleSavedTagChain(message);
         });
     }
 
@@ -219,7 +225,7 @@ var lev = new function(){
     }
 
     function hideAllMenuContainers(){
-        $('#tag_menu_content, #tag_menu_chain, #tag_menu_preview, #tag_menu_who, #tag_menu_load_page, #chain_menu_expanded, #tag_menu_notification_saved, #tm_loader_message').hide();
+        $('#tag_menu_content, #tag_menu_chain, #tag_menu_preview, #tag_menu_who, #tag_menu_load_page, #chain_menu_expanded, #tag_menu_notification_saved, #tm_loader_message, #chain_menu_expanded_new').hide();
     }
 
 
@@ -230,6 +236,8 @@ var lev = new function(){
 
         pulse.tagSaved = false;
         var data = {
+            action:"socket",
+            which:'save_tag',
             url: pulse.url,
             width: $(window).width(),
             height: $(window).height(),
@@ -239,17 +247,17 @@ var lev = new function(){
             zoom: '',
             pulsePos: JSON.stringify(pulse.pos)
         };
+        // send save message to bg script
+        chromePort.postMessage(data);
+    }
 
-        $.post(processURL + 'save_tag', {data:JSON.stringify(data)}).done(function(res){
-            console.log('res', res);
-            if(res != ''){
-                if(res.success){
-                    pulse.tagSaved = true;
-                    pulse.id = res.id;
-                    //saveTagImages();
-                }
-            }
-        });
+    function handleSavedTag(res){
+        if(res.success){
+            pulse.tagSaved = true;
+            pulse.id = res.id;
+            console.log('tag saved', res)
+            //saveTagImages();
+        }
     }
 
 
@@ -304,49 +312,53 @@ var lev = new function(){
     }
 
     function saveTagText(){
-        var data = {thoughts: pulse.comment, id: pulse.id};
         hideAllMenuContainers();
         $('#tag_menu_load_page, #tm_loader').show(); // show loader menu
-        $.post(processURL + 'save_tag_text', {data:JSON.stringify(data)}).done(function(res){
-            console.log('save message', res);
-            if(res.success)
-                setTimeout(function(){
-                    $('#tm_loader').hide();
-                    $('#tm_loader_message').show().html('Select a chain...');
-                    setTimeout(showChainMenu, 1000)
-                }, 1000);
-        });
+
+        var data = {thoughts: pulse.comment, id: pulse.id, action:"socket", which: 'save_tag_text'};
+        chromePort.postMessage(data);
+    }
+
+    function handleSavedTagText(res){
+        console.log('saved text', res);
+        if(res.success)
+            setTimeout(function(){
+                $('#tm_loader').hide();
+                $('#tm_loader_message').show().html('Select a chain...');
+                setTimeout(showChainMenu, 1000)
+            }, 1000);
     }
 
     function showChainMenu(){
         hideAllMenuContainers();
+        $('#chain_menu_expanded_list').show();
         $('#tag_menu_chain').fadeIn(300);
         $('#pp_icon').attr('class', 'pp_chain');
 
     }
 
-    function saveTagChain(tID){
+    function saveTagChain(cID){
         console.log('saveTagChain');
-        if(typeof tID !== 'number'){
-            tID = $(this).find('input').val();
-        }
-
-        var data = {tagID: tID, id: pulse.id};
         hideAllMenuContainers();
         $('#tag_menu_load_page, #tm_loader').show(); // show loader menu
 
-        $.post(processURL + 'save_tag_chain', {data:JSON.stringify(data)}).done(function(res){
-            setTimeout(function(){
-                $('#tm_loader').hide();
-                $('#tm_loader_message').show().html('Tag saved.');
-                setTimeout(function(){
-                    pulse.menu.fadeOut(200);
-                    $('#tag_menu_load_page').hide();
-                }, 2000);
-            }, 1000);
-        });
+        if(typeof cID !== 'number')
+            cID = $(this).find('input').val();
 
-        console.log('tID', tID);
+        var data = {chainID: cID, tagID: pulse.id, action:"socket", which: 'save_tag_chain'};
+        chromePort.postMessage(data);
+    }
+
+    function handleSavedTagChain(res){
+        console.log('SavedTagChain', res);
+        setTimeout(function(){
+            $('#tm_loader').hide();
+            $('#tm_loader_message').show().html('Tag saved.');
+            setTimeout(function(){
+                pulse.menu.fadeOut(200);
+                $('#tag_menu_load_page').hide();
+            }, 2000);
+        }, 1000);
     }
 
     // stuff dealing with new chain menu
@@ -363,7 +375,7 @@ var lev = new function(){
             return alert("Must be at least one character.")
 
 
-        var req = {action: "socket", message: 'save_new_chain', chainName: chainName};
+        var req = {action: "socket", action:"socket", which: 'save_new_chain', chainName: chainName};
         chromePort.postMessage(req);
 
         console.log('save req', req);
@@ -378,6 +390,10 @@ var lev = new function(){
     function cancelNewChain(){
         $('#chain_menu_expanded_list, #chain_menu_expanded_select').show();
         $('#chain_menu_expanded_new').hide();
+    }
+
+    function deleteChain(){
+
     }
 
     function saveTagImages(){

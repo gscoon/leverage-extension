@@ -106,7 +106,7 @@ var bg = new function(){
         req.extID = this.extID;
         req.callbackID = genRandomID(5);
         callbackObj[req.callbackID] = callback;
-        socket.emit(req.message, req);
+        socket.emit(req.which, req);
     }
 
     this.showFacebookAuth = function(){
