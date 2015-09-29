@@ -7,6 +7,7 @@ var bg = new function(){
     var socket = null;
     var authWindow = null;
     var menuHTML = null;
+    var callbackObj = {};  //holds callback functions
 
     window.onload = start.bind(this);
 
@@ -14,20 +15,27 @@ var bg = new function(){
         console.log('previousVersion', details.previousVersion);
     });
 
-    chrome.runtime.onMessage.addListener(messageListener.bind(this));
+    //chrome.runtime.onMessage.addListener(messageListener.bind(this));
 
-    function messageListener(request, sender, sendResponse) {
-        console.log(request, sender);
-        console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
+    chrome.runtime.onConnect.addListener(connectionListener.bind(this));
 
-        if(request.action){
-            if (request.action == "capture")
-                sendResponse({farewell: "gotcha"});
-            else if (request.action == "menu")
-                sendResponse({menu: this.menuHTML});
-            else if (request.action == "socket")
-                sendSocketMessage.call(this, request, sendResponse);
-        }
+
+    function connectionListener(port){
+        var self = this;
+        console.log('port connection established', port);
+
+        port.onMessage.addListener(function(request) {
+            if(request.action){
+                if (request.action == "capture")
+                    port.postMessage({farewell: "gotcha"});
+                else if (request.action == "menu")
+                    port.postMessage({action:'menu', menu: self.menuHTML});
+                else if(request.action == "socket")
+                    sendSocketMessage.call(self, request, function(d){
+                        port.postMessage(d);
+                    });
+            }
+        });
     }
 
     function start(){
@@ -45,15 +53,15 @@ var bg = new function(){
 
             isConnected = true;
             console.log('socket connected');
-            socket.emit('extID', self.extID);
-            socket.emit('get_pulse_menu', self.extID);
+            socket.emit('extID', {extID: self.extID});
+
 
             // listen for user information based on extension id
             socket.on('menu', handleMenu.bind(self));
             socket.on('user', handleUserResults.bind(self));
             socket.on('auth_status', handleAuthUpdate.bind(self));
             socket.on('content', handleContent.bind(self));
-
+            socket.on('callback', handleSocketCallback.bind(self));
         });
 
         function handleMenu(data){
@@ -63,9 +71,13 @@ var bg = new function(){
 
         function handleUserResults(data){
             console.log('user results: ', data);
-            if(data.length == 0){
+            if(typeof data != 'object' || !('name' in data))
+                return false;
 
-            }
+            // if user exists, then get menu
+            socket.emit('get_pulse_menu', {extID: self.extID});
+
+            //handle facebook auth
             //this.showFacebookAuth();
         }
 
@@ -81,10 +93,19 @@ var bg = new function(){
         function handleContent(data){
             console.log(data);
         }
+
+        function handleSocketCallback(data){
+            console.log('handleSocketCallback', data);
+            if(typeof data == 'object' && 'callbackID' in data)
+                callbackObj[data.callbackID](data);
+        }
+
     }
 
-    function sendSocketMessage(req, res){
+    function sendSocketMessage(req, callback){
         req.extID = this.extID;
+        req.callbackID = genRandomID(5);
+        callbackObj[req.callbackID] = callback;
         socket.emit(req.message, req);
     }
 
