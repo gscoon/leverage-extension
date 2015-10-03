@@ -58,8 +58,10 @@
 			var eleHeight = $element.height();
 			var eleWidth = $element.width();
 			var circleCSS = "position:absolute;top:"
-				+ ( elePosition.top + ( eleHeight / 2 ) + cTop )
-				+ "px;left:" + ( elePosition.left + ( eleWidth / 2 ) + cLeft )
+				//+ ( elePosition.top + ( eleHeight / 2 ) + cTop )
+				+ (cTop )
+				//+ "px;left:" + ( elePosition.left + ( eleWidth / 2 ) + cLeft )
+				+ "px;left:" + (cLeft)
 				+ "px;width:0px;height:0px;background:"
 				+ cColor + ";z-index:"
 				+ zIndex

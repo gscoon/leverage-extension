@@ -53,8 +53,7 @@ var bg = new function(){
 
             isConnected = true;
             console.log('socket connected');
-            socket.emit('extID', {extID: self.extID});
-
+            socket.emit('extension_check', {extID: self.extID});
 
             // listen for user information based on extension id
             socket.on('menu', handleMenu.bind(self));
@@ -96,8 +95,9 @@ var bg = new function(){
 
         function handleSocketCallback(data){
             console.log('handleSocketCallback', data);
-            if(typeof data == 'object' && 'callbackID' in data)
+            if(typeof data == 'object' && 'callbackID' in data){
                 callbackObj[data.callbackID](data);
+            }
         }
 
     }

@@ -1,10 +1,10 @@
 {
   "appName": {
-    "message": "Leverage",
-    "description": "The name of the application"
+    "message": "Pulse",
+    "description": "Control where and how you talk about content."
   },
   "appDescription": {
-    "message": "Where brands fight for you",
+    "message": "Control where and how you talk about content",
     "description": "The description of the application"
   }
 }
