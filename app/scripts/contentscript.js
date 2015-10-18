@@ -176,8 +176,6 @@ var lev = new function(){
         pulse.pos = returnDimensions(pulse.target, e.pageX, e.pageY);
         var dims = pulse.pos.dims;
 
-        console.log('pulse tag', pulse.target.prop("tagName"), dims, {x:e.pageX, y:e.pageY});
-
         pulse.pos.abs = {x: e.pageX, y: e.pageY}
         pulse.pos.rel = {x: (e.pageX - dims.ol), y:(e.pageY - dims.ot)};
         pulse.pos.spacing = {left: dims.ol - dims.opl, top: dims.ot - dims.opt};
@@ -244,7 +242,6 @@ var lev = new function(){
 
 
     function saveTag(){
-        console.log('saveTag');
         var saved = $('#tag_menu_notification_saved');
         saved.hide();
 
@@ -269,7 +266,6 @@ var lev = new function(){
             pulse.tagSaved = true;
             pulse.id = res.id;
             pulse.result = res.result; //used later to place permanently
-            console.log('tag saved', res)
             //saveTagImages();
         }
     }
@@ -280,7 +276,6 @@ var lev = new function(){
     }
 
     function closePulse(){
-        console.log('close attempt');
         $('.' + pulse.class).hide().css('visible','hidden');
         pulse.target.jPulse( "disable" );
         pulse.menu.hide();
@@ -288,8 +283,6 @@ var lev = new function(){
     }
 
     function showMessageMenu(fade){
-        console.log('showMessageMenu');
-
         hideAllMenuContainers();
         $('#tag_menu_content').show();
         $('#pp_icon').attr('class', 'pp_text');
@@ -332,7 +325,6 @@ var lev = new function(){
     }
 
     function handleSavedTagText(res){
-        console.log('saved text', res);
         if(res.success)
             setTimeout(function(){
                 $('#tm_loader').hide();
@@ -349,7 +341,6 @@ var lev = new function(){
     }
 
     function saveTagChain(cID){
-        console.log('saveTagChain');
         hideAllMenuContainers();
         $('#tag_menu_load_page, #tm_loader').show(); // show loader menu
 
@@ -361,7 +352,6 @@ var lev = new function(){
     }
 
     function handleSavedTagChain(res){
-        console.log('SavedTagChain', res);
         setTimeout(function(){
             $('#tm_loader').hide();
             $('#tm_loader_message').show().html('Tag saved.');
@@ -393,11 +383,9 @@ var lev = new function(){
 
         var req = {action: "socket", which: 'save_new_chain', chainName: chainName};
         chromePort.postMessage(req);
-        console.log('save req', req);
     }
 
     function handleNewChain(response){
-        console.log('saved chain', response);
         saveTagChain(response.chainID);
     }
 
@@ -410,34 +398,25 @@ var lev = new function(){
         if(!confirm('Are you sure you want to delete this')) return false;
         var cID = $(this).find('input').val();
         var req = {action: "socket", which: 'delete_chain', chainID: cID};
-        console.log('delete chain', req);
         chromePort.postMessage(req);
     }
 
     function handleDeletedChain(response){
-        console.log('deleted response', response);
         var aID = 'chain_delete_' + response.chainID;
         $('#' + aID).parent().fadeOut(300);
     }
 
     function handlePageTags(response){
-        console.log('page tag response', response);
         setExistingTag(response.results);
     }
 
     function setExistingTag(tArray){
-        console.log('setExistingTag', tArray);
         tArray.forEach(function(tag, i){
             var famSelector = getFamilySelector(tag.family);
-
-            console.log('famSelector', famSelector);
-
             var classTarget = $($.trim(famSelector.byClass));
-            console.log('targets found - class : ', classTarget.length);
             var indexTarget = $($.trim(famSelector.byIndex));
-            console.log('targets found - index : ', indexTarget.length);
             var tagTarget = $($.trim(famSelector.byTagName));
-            console.log('targets found - tag: ', tagTarget.length);
+            console.log('targets found', famSelector, 'index', indexTarget.length, 'class', classTarget.length, 'tag', tagTarget.length);
 
             // which one are you going with??
             var target = indexTarget;
@@ -542,7 +521,7 @@ var lev = new function(){
             cProp.target = cProp.target.parent();
         }
 
-        console.log('capture element:', cProp);
+        console.log('handleCaptureDetails:', cProp);
     }
 
     function handleCaptureCrop(){
@@ -586,30 +565,35 @@ var lev = new function(){
         };
 
         // loop through all elements looking for an image
+        var eles = pulse.cProp.target.find('*');
+        eles.push(pulse.cProp.target[0]);
 
-        pulse.cProp.target.find('*').each(function(i,v){
-            var ele = $(this);
-
-            // if traditional image...
-            if(ele.prop("tagName").toLowerCase() == 'img'){
-                var obj = {url: ele.attr('src'), type:'img'}
-                sendCaptureRemote.call(this, obj);
-            }
-
-            // if background image
-            var bgURL = ele.css('background-image');
-            if(bgURL){
-                bgURL = bgURL.replace('url(','').replace(')','');
-                if(bgURL.toLowerCase() != 'none'){
-                    var obj = {url: bgURL, type:'bg'};
-                    sendCaptureRemote.call(this, obj);
-                }
-            }
-        });
+        pulse.cProp.target.find('*').each(remoteImageCaptureCheck); // find all targets iwthin
+        pulse.cProp.target.each(remoteImageCaptureCheck); // make sure you include the actual target
 
         if(cp.remote.count == 0) finishDOMCapture();
 
         console.log('handleCaptureRemoteImages', pulse.cProp);
+    }
+
+    function remoteImageCaptureCheck(a, b){
+        var ele = $(this);
+
+        // if traditional image...
+        if(ele.prop("tagName").toLowerCase() == 'img'){
+            var obj = {url: ele.attr('src'), type:'img'}
+            sendCaptureRemote.call(this, obj);
+        }
+
+        // if background image
+        var bgURL = ele.css('background-image');
+        if(bgURL){
+            bgURL = bgURL.replace('url(','').replace(')','');
+            if(bgURL.toLowerCase() != 'none'){
+                var obj = {url: bgURL, type:'bg'};
+                sendCaptureRemote.call(this, obj);
+            }
+        }
     }
 
     function sendCaptureRemote(o){
@@ -636,7 +620,6 @@ var lev = new function(){
     }
 
     function handleCaptureRemoteResponse(r){
-        console.log('handleCaptureRemoteResponse', pulse.cProp);
         var ele = $('[data-pulse-convert-' + r.type + '="' + r.id + '"]');
 
         if(r.type == 'img')
@@ -647,10 +630,12 @@ var lev = new function(){
         pulse.cProp.remote.completed++;
         if(pulse.cProp.remote.completed == pulse.cProp.remote.count)
             finishDOMCapture();
+
+        console.log('handleCaptureRemoteResponse', r);
     }
 
     function finishDOMCapture(){
-        console.log('finishDOMCapture');
+        console.log('start capture rendering');
         var cp = pulse.cProp;
         cp.timing['remote'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
         var bgColor = $('body').css("background-color");
