@@ -74,6 +74,8 @@ var lev = new function(){
                 handleDeletedChain(message);
             else if(message.action === 'page_tags')
                 handlePageTags(message);
+            else if(message.action === 'convert_image')
+                handleCaptureRemoteResponse(message);
         });
     }
 
@@ -148,15 +150,6 @@ var lev = new function(){
             ctrKeyPressed = false;
             $('a.disabled').removeClass('disabled');
         }
-
-
-        $('img').on('click', function(e){
-           convertImgToBase64URL($(this).attr('src'), 'image/png', function(dataURL){
-               console.log('converted: ', dataURL);
-           });
-           console.log($(this).attr('src'));
-       });
-
 
        // pulsate!!
        $(window).on('click', pulsate);
@@ -379,7 +372,7 @@ var lev = new function(){
 
                     $('.' + pulse.class).hide().css('visible','hidden');
                     pulse.target.jPulse("disable");
-                    captureElement();
+                    startDOMCapture();
                 });
             }, 2000);
         }, 1000);
@@ -474,13 +467,9 @@ var lev = new function(){
         });
     }
 
-    function captureElement(){
-        var minW = 400;
-        var minH = 150;
-        var captureTarget = pulse.target;
-        var exactFit = true;
-
-        var cap = {
+    function startDOMCapture(){
+        pulse.cProp = {
+            target: pulse.target,
             minW: 400,
             minH: 150,
             maxW: 800,
@@ -490,111 +479,206 @@ var lev = new function(){
             firstW: null, // first width match
             firstH: null, // first height match
             finalW: null,
-            finalH: null
+            finalH: null,
+            exactFit: true,
+            start:{
+                left: 0,
+                top: 0
+            },
+            timing: {}, // performance testing
+            remote: {}  //images
         };
+
+        var cProp = pulse.cProp;
+        cProp.timing['start'] = +new Date() / 1000;  // log start timestamp
+        handleCaptureDetails();
+        cProp.timing['dets'] = +new Date() / 1000 - cProp.timing['start'];  // log start timestamp
+        handleCaptureCrop();
+        cProp.timing['crop'] = +new Date() / 1000 - cProp.timing['start'];  // log start timestamp
+        handleCaptureRemoteImages();
+
+    }
+
+    function handleCaptureDetails(){
+        var cProp = pulse.cProp;
 
         while(true){
             // set current capture target properties
-            var c = {w: captureTarget.width(), h: captureTarget.height(), tagName: captureTarget.prop("tagName").toLowerCase()};
+            var c = {w: cProp.target.width(), h: cProp.target.height(), tagName: cProp.target.prop("tagName").toLowerCase()};
 
             // if this is the first target to reach the dimension criteria
-            if(cap.firstW == null && c.w >= minW) cap.firstW = c.w;
-            if(cap.firstH == null && c.h >= minH) cap.firstH = c.h;
+            if(cProp.firstW == null && c.w >= cProp.minW) cProp.firstW = c.w;
+            if(cProp.firstH == null && c.h >= cProp.minH) cProp.firstH = c.h;
 
             // if both the width and height criteria have been met
-            if((cap.firstW != null && cap.firstH != null) || c.tagName == 'body'){
+            if((cProp.firstW != null && cProp.firstH != null) || c.tagName == 'body'){
                 // figure out final width
-                if(c.w <= cap.maxW) // if captureTarget width is less than max
-                    cap.finalW = c.w;
-                else if(cap.firstW != null && cap.firstW <= cap.maxW){ // if the first found width is set and less than the max
-                    cap.finalW = cap.firstW;
-                    exactFit = false;
+                if(c.w <= cProp.maxW) // if cProp.target width is less than max
+                    cProp.finalW = c.w;
+                else if(cProp.firstW != null && cProp.firstW <= cProp.maxW){ // if the first found width is set and less than the max
+                    cProp.finalW = cProp.firstW;
+                    cProp.exactFit = false;
                 }
                 else {
-                    cap.finalW = cap.defaultW
-                    exactFit = false;
+                    cProp.finalW = cProp.defaultW
+                    cProp.exactFit = false;
                 }
 
                 // figure out final Height
-                if(c.h <= cap.maxH)
-                    cap.finalH = c.h;
-                else if(cap.firstH != null && cap.firstH <= cap.maxH){
-                    cap.finalH = cap.firstH;
-                    exactFit = false;
+                if(c.h <= cProp.maxH)
+                    cProp.finalH = c.h;
+                else if(cProp.firstH != null && cProp.firstH <= cProp.maxH){
+                    cProp.finalH = cProp.firstH;
+                    cProp.exactFit = false;
                 }
                 else {
-                    cap.finalH = cap.defaultH
-                    exactFit = false;
+                    cProp.finalH = cProp.defaultH
+                    cProp.exactFit = false;
                 }
 
                 break;
             }
 
-            captureTarget = captureTarget.parent();
+            cProp.target = cProp.target.parent();
         }
 
-        console.log('capture element:', cap);
+        console.log('capture element:', cProp);
+    }
 
-        var start = {left:0, top:0};
+    function handleCaptureCrop(){
 
-        if(!exactFit){
-            var captureOffset = captureTarget.offset();
+        var cProp = pulse.cProp;
 
-            //start.left = pulse.pos.abs.x - dims.x/2;
+        if(!cProp.exactFit){
+            var captureOffset = cProp.target.offset();
 
-            // (orig target top - cap target top) -
-            //var calcedTop = (pulse.pos.dims.ot - captureOffset.top) - (cap.finalH - pulse.target.height())/2;
-
-            var calcedTop = pulse.pos.abs.y - captureOffset.top - cap.finalH/2;
-            var calcedLeft = pulse.pos.abs.x - captureOffset.left - cap.finalW/2;
-
-            //var calcedLeft = (pulse.pos.ol - captureOffset.left) - (cap.finalW - pulse.target.width())/2;
+            var calcedTop = pulse.pos.abs.y - captureOffset.top - cProp.finalH/2;
+            var calcedLeft = pulse.pos.abs.x - captureOffset.left - cProp.finalW/2;
 
             // if it pushes against bottom
-            if((captureTarget.height() - calcedTop) < cap.finalH)
-                start.top = captureTarget.height() - cap.finalH;
+            if((cProp.target.height() - calcedTop) < cProp.finalH)
+                cProp.start.top = cProp.target.height() - cProp.finalH;
             else if(calcedTop < 0) // if it pushes against top
-                start.top = 0;
+                cProp.start.top = 0;
             else
-                start.top = calcedTop;
+                cProp.start.top = calcedTop;
 
             // if it pushes against the sides
-            if((captureTarget.width() - calcedLeft) < cap.finalW)
-                start.left = captureTarget.width() - cap.finalW;
+            if((cProp.target.width() - calcedLeft) < cProp.finalW)
+                cProp.start.left = cProp.target.width() - cProp.finalW;
             else if(calcedLeft < 0) // if it pushes against top
-                start.left = 0;
+                cProp.start.left = 0;
             else
-                start.left = calcedLeft;
+                cProp.start.left = calcedLeft;
 
         }
 
-        var redSquare = $('<div style="background-color:red; width:700px; height:300px; position:absolute; opacity:.2;"></div>');
-        redSquare.css('top', start.top);
-        redSquare.css('left', start.left);
-        redSquare.css('height', cap.finalH);
-        redSquare.css('width', cap.finalW);
-        captureTarget.css('position', 'relative').append(redSquare);
-        //console.log('capture element:', calcedTop, start, pulse.pos.dims.ot, captureOffset.top, cap.finalH, pulse.target.height());
+        console.log('handleCaptureCrop', cProp);
+    }
 
-        /*
-        html2canvas(captureTarget[0], {
+    function handleCaptureRemoteImages(){
+        var capImgs = pulse.cProp.target.find('img');
+        var cp = pulse.cProp;
+        cp.remote = {
+            completed: 0,
+            count: 0,
+            existing: {}
+        };
+
+        // loop through all elements looking for an image
+
+        pulse.cProp.target.find('*').each(function(i,v){
+            var ele = $(this);
+
+            // if traditional image...
+            if(ele.prop("tagName").toLowerCase() == 'img'){
+                var obj = {url: ele.attr('src'), type:'img'}
+                sendCaptureRemote.call(this, obj);
+            }
+
+            // if background image
+            var bgURL = ele.css('background-image');
+            if(bgURL){
+                bgURL = bgURL.replace('url(','').replace(')','');
+                if(bgURL.toLowerCase() != 'none'){
+                    var obj = {url: bgURL, type:'bg'};
+                    sendCaptureRemote.call(this, obj);
+                }
+            }
+        });
+
+        if(cp.remote.count == 0) finishDOMCapture();
+
+        console.log('handleCaptureRemoteImages', pulse.cProp);
+    }
+
+    function sendCaptureRemote(o){
+        var cp = pulse.cProp;
+        var dataTag = 'data-pulse-convert-' + o.type;
+        // check if full url
+        if(o.url.split('//') == 1)
+            o.url = window.location.protocol + '//' + window.location.hostname + o.url;
+
+        // existing image
+        if(typeof cp.remote.existing[o.type + o.url] !== 'undefined')
+            $(this).attr(dataTag, cp.remote.existing[o.type + o.url]);
+        else{
+            var id = randomStr(5);
+            $(this).attr(dataTag, id);  // set data tag
+            cp.remote.existing[o.type + o.url] = id; // add it to the existing list
+
+            var sendObj = {action: "convert_image", format: 'image/png', url: o.url, type: o.type, id: id};
+            console.log('sendCaptureRemote', sendObj);
+
+            chromePort.postMessage(sendObj);
+            cp.remote.count++;
+        }
+    }
+
+    function handleCaptureRemoteResponse(r){
+        console.log('handleCaptureRemoteResponse', pulse.cProp);
+        var ele = $('[data-pulse-convert-' + r.type + '="' + r.id + '"]');
+
+        if(r.type == 'img')
+            ele.attr('src', r.dataURL);
+        else
+            ele.css('background-image', 'url(' + r.dataURL + ')');
+
+        pulse.cProp.remote.completed++;
+        if(pulse.cProp.remote.completed == pulse.cProp.remote.count)
+            finishDOMCapture();
+    }
+
+    function finishDOMCapture(){
+        console.log('finishDOMCapture');
+        var cp = pulse.cProp;
+        cp.timing['remote'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
+        var bgColor = $('body').css("background-color");
+
+        html2canvas(cp.target[0], {
             onrendered: function(oldCanvas) {
+                cp.timing['render'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
                 var img = new Image();
                 var newCanvas = document.createElement('CANVAS');
                 var ctx = newCanvas.getContext('2d');
-                newCanvas.width = cap.finalW;
-                newCanvas.height = cap.finalH;
+                newCanvas.width = cp.finalW;
+                newCanvas.height = cp.finalH;
 
                 img.onload = function (){
-                    ctx.drawImage(this, start.left, start.top, cap.finalW, cap.finalH, 0, 0, cap.finalW, cap.finalH);
+                    ctx.drawImage(this, cp.start.left, cp.start.top, cp.finalW, cp.finalH, 0, 0, cp.finalW, cp.finalH);
                     $('#pulse_preview').append(newCanvas);
                     $('#pulse_preview, #general_overlay').show();
+                    cp.timing['end'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
+                    console.log(cp.timing);
                 }
 
                 img.src = oldCanvas.toDataURL("image/png");
 
-            }
-        }); */
+            },
+            background: bgColor,
+            allowTaint: true,
+            logging: true
+        });
     }
 
     function returnDimensions(c, x, y){
@@ -666,7 +750,7 @@ var lev = new function(){
         var c = 0;
         while(go){
             var classVal = $.trim(current.attr('class'));
-            if(classVal !== undefined) classVal = classVal.split(' +'); // look for one or more spaces
+            if(classVal !== undefined) classVal = classVal.split(/ +/); // look for one or more spaces
             var gen = {
                 tagName: current.prop("tagName").toLowerCase(),
                 class: classVal, //array

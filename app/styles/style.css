@@ -820,8 +820,6 @@ input#chain_menu_expanded_new_check
 
 #pulse_preview
 {
-    width:500px;
-    height:500px;
     position:fixed;
     top:100px;
     left:50%;

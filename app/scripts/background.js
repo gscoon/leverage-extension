@@ -23,17 +23,26 @@ var bg = new function(){
     function connectionListener(port){
         var self = this;
         console.log('port connection established', port);
-
         port.onMessage.addListener(function(request) {
+            //console.log('action',request.action);
             if(request.action){
                 if (request.action == "capture")
                     port.postMessage({farewell: "gotcha"});
                 else if (request.action == "menu")
                     port.postMessage({action:'menu', menu: self.menuHTML});
-                else if(request.action == "socket")
+                else if(request.action == "socket"){
                     sendSocketMessage.call(self, request, function(d){
                         port.postMessage(d);
                     });
+                }
+                else if(request.action == "convert_image"){
+                    convertImgToBase64URL(request, function(dURL){
+                        console.log('convert', dURL);
+                        request.dataURL = dURL;
+                        port.postMessage(request);
+                    });
+                }
+
             }
         });
     }
@@ -144,6 +153,27 @@ var bg = new function(){
             startSocket.apply(self);
             console.log('extension id saved: ', self.extID);
         });
+    }
+
+    function convertImgToBase64URL(req, callback){
+        var img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function(){
+            var canvas = document.createElement('CANVAS'),
+            ctx = canvas.getContext('2d');
+            canvas.height = this.height;
+            canvas.width = this.width;
+            ctx.drawImage(this, 0, 0);
+            var dataURL = canvas.toDataURL(req.format);
+            callback(dataURL);
+            canvas = null;
+        };
+
+        img.onerror = function(){
+            callback("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="); // blank gif
+        }
+
+        img.src = req.url;
     }
 
     function genRandomID(len){
