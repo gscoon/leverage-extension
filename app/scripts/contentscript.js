@@ -121,25 +121,33 @@ var lev = new function(){
     }
 
     function setEventHandlers(){
-        $(window).on('keydown', function(e){
-            if(e.keyCode == 17){
-                if(ctrKeyPressed) return false;
+        // on key press
 
+        var ctrlKey = 17, vKey = 86, cKey = 67, fKey = 70;
+        $(window).on('keydown', function(e){
+            if(e.keyCode == ctrlKey){
+                if(ctrKeyPressed) return false;
                 console.log('control key pressed');
                 ctrKeyPressed = true;
-
                 $('a').addClass('disabled');
+            }
+            else if(ctrKeyPressed && (e.keyCode == cKey || e.keyCode == vKey || e.keyCode == fKey)){
+                console.log('special key');
+                resetKeys();
             }
         })
 
         $(window).on('keyup', function(e){
-            if(e.keyCode == 17){
+            if(e.keyCode == ctrlKey){
                 console.log('control key released');
-                ctrKeyPressed = false;
-
-                $('a.disabled').removeClass('disabled');
+                resetKeys();
             }
         })
+
+        function resetKeys(){
+            ctrKeyPressed = false;
+            $('a.disabled').removeClass('disabled');
+        }
 
 
         $('img').on('click', function(e){
@@ -155,6 +163,8 @@ var lev = new function(){
 
     }
 
+
+
     // create annotation / pulse
     function pulsate(e){
         if(!ctrKeyPressed)
@@ -164,13 +174,17 @@ var lev = new function(){
             closePulse();
 
         pulse.target = $(e.target);
+
+        // get the position of the target in different ways
         setFamilyTree();
+
         pulse.class = randomStr(5);
         pulse.innerText = $.trim(pulse.target.text());
+        pulse.pos = returnDimensions(pulse.target, e.pageX, e.pageY);
+        var dims = pulse.pos.dims;
 
-        var dims = null;
-        pulse.pos.dims = dims = returnDimensions(pulse.target);
         console.log('pulse tag', pulse.target.prop("tagName"), dims, {x:e.pageX, y:e.pageY});
+
         pulse.pos.abs = {x: e.pageX, y: e.pageY}
         pulse.pos.rel = {x: (e.pageX - dims.ol), y:(e.pageY - dims.ot)};
         pulse.pos.spacing = {left: dims.ol - dims.opl, top: dims.ot - dims.opt};
@@ -205,13 +219,16 @@ var lev = new function(){
 
         pulse.pointer.find('#pp_icon').attr('class', 'pp_text');
 
+        $('#tag_menu_content').show(); // need this to get accurate width below
+        var mw = pulse.menu.width();
+
         // figure out where place menu
-        var slope = 1 - pulse.menu.width() / pulse.pos.window.w;
         var menuPos = {top: y - 48/2, zIndex: z.menu};
 
+        // if pulse is on the right side of the screen
         if(pulse.pos.window.w / 2 < x){
             pulse.pointer.attr('class', 'pulse_pointer_right');
-            menuPos.left = x - pulse.menu.width() - 80;
+            menuPos.left = x - mw - 80;
         }
         else{
             pulse.pointer.attr('class', 'pulse_pointer_left');
@@ -276,8 +293,6 @@ var lev = new function(){
         pulse.menu.hide();
 
     }
-
-
 
     function showMessageMenu(fade){
         console.log('showMessageMenu');
@@ -364,7 +379,7 @@ var lev = new function(){
 
                     $('.' + pulse.class).hide().css('visible','hidden');
                     pulse.target.jPulse("disable");
-                    //captureElement($('body'));
+                    captureElement();
                 });
             }, 2000);
         }, 1000);
@@ -423,13 +438,30 @@ var lev = new function(){
             var famSelector = getFamilySelector(tag.family);
 
             console.log('famSelector', famSelector);
-            var target = $(famSelector.byClass);
+
+            var classTarget = $($.trim(famSelector.byClass));
+            console.log('targets found - class : ', classTarget.length);
+            var indexTarget = $($.trim(famSelector.byIndex));
+            console.log('targets found - index : ', indexTarget.length);
+            var tagTarget = $($.trim(famSelector.byTagName));
+            console.log('targets found - tag: ', tagTarget.length);
+
+            // which one are you going with??
+            var target = indexTarget;
+
+            //var pos = returnDimensions(target, tag.placement.abs.x, tag.placement.abs.y);
 
             var psc = $('<div class="pulse_set_circle" id="psc_' + tag.tag_id + '"></div>');
             var psb = $('<div class="pulse_set_bar" id="psc_' + tag.tag_id + '"></div>');
 
-            target.parent().append(psc);
-            target.parent().append(psb);
+            var par = target.parent();
+            if(par.css('position') != 'absolute')
+                par.css('position', 'relative');
+
+            par.append(psc);
+            //par.append(psb);
+
+            //classTarget.parent().css('backgroundColor', '#000000');
 
             // circle
             psc.css('top', tag.placement.opt.top - .5 * psc.height());
@@ -438,26 +470,123 @@ var lev = new function(){
             // bar
             psb.css('top', tag.placement.opt.top - .5 * psb.height());
             psb.css('left', tag.placement.dims.opl * -1);
-            psb.width(tag.placement.window.w);
+            psb.width($(window).width());
         });
     }
 
-    function captureElement(target){
-        html2canvas(target[0], {
-            onrendered: function(oldCanvas) {
-                var dims = {x:500,y:500};
-                var start = {left:0, top:0};
-                if(pulse.pos.abs.x > dims.x/2) start.left = pulse.pos.abs.x - dims.x/2;
-                if(pulse.pos.abs.y > dims.y/2) start.top = pulse.pos.abs.y - dims.y/2;
+    function captureElement(){
+        var minW = 400;
+        var minH = 150;
+        var captureTarget = pulse.target;
+        var exactFit = true;
 
+        var cap = {
+            minW: 400,
+            minH: 150,
+            maxW: 800,
+            maxH: 600,
+            defaultW: 600,
+            defaultH: 400,
+            firstW: null, // first width match
+            firstH: null, // first height match
+            finalW: null,
+            finalH: null
+        };
+
+        while(true){
+            // set current capture target properties
+            var c = {w: captureTarget.width(), h: captureTarget.height(), tagName: captureTarget.prop("tagName").toLowerCase()};
+
+            // if this is the first target to reach the dimension criteria
+            if(cap.firstW == null && c.w >= minW) cap.firstW = c.w;
+            if(cap.firstH == null && c.h >= minH) cap.firstH = c.h;
+
+            // if both the width and height criteria have been met
+            if((cap.firstW != null && cap.firstH != null) || c.tagName == 'body'){
+                // figure out final width
+                if(c.w <= cap.maxW) // if captureTarget width is less than max
+                    cap.finalW = c.w;
+                else if(cap.firstW != null && cap.firstW <= cap.maxW){ // if the first found width is set and less than the max
+                    cap.finalW = cap.firstW;
+                    exactFit = false;
+                }
+                else {
+                    cap.finalW = cap.defaultW
+                    exactFit = false;
+                }
+
+                // figure out final Height
+                if(c.h <= cap.maxH)
+                    cap.finalH = c.h;
+                else if(cap.firstH != null && cap.firstH <= cap.maxH){
+                    cap.finalH = cap.firstH;
+                    exactFit = false;
+                }
+                else {
+                    cap.finalH = cap.defaultH
+                    exactFit = false;
+                }
+
+                break;
+            }
+
+            captureTarget = captureTarget.parent();
+        }
+
+        console.log('capture element:', cap);
+
+        var start = {left:0, top:0};
+
+        if(!exactFit){
+            var captureOffset = captureTarget.offset();
+
+            //start.left = pulse.pos.abs.x - dims.x/2;
+
+            // (orig target top - cap target top) -
+            //var calcedTop = (pulse.pos.dims.ot - captureOffset.top) - (cap.finalH - pulse.target.height())/2;
+
+            var calcedTop = pulse.pos.abs.y - captureOffset.top - cap.finalH/2;
+            var calcedLeft = pulse.pos.abs.x - captureOffset.left - cap.finalW/2;
+
+            //var calcedLeft = (pulse.pos.ol - captureOffset.left) - (cap.finalW - pulse.target.width())/2;
+
+            // if it pushes against bottom
+            if((captureTarget.height() - calcedTop) < cap.finalH)
+                start.top = captureTarget.height() - cap.finalH;
+            else if(calcedTop < 0) // if it pushes against top
+                start.top = 0;
+            else
+                start.top = calcedTop;
+
+            // if it pushes against the sides
+            if((captureTarget.width() - calcedLeft) < cap.finalW)
+                start.left = captureTarget.width() - cap.finalW;
+            else if(calcedLeft < 0) // if it pushes against top
+                start.left = 0;
+            else
+                start.left = calcedLeft;
+
+        }
+
+        var redSquare = $('<div style="background-color:red; width:700px; height:300px; position:absolute; opacity:.2;"></div>');
+        redSquare.css('top', start.top);
+        redSquare.css('left', start.left);
+        redSquare.css('height', cap.finalH);
+        redSquare.css('width', cap.finalW);
+        captureTarget.css('position', 'relative').append(redSquare);
+        //console.log('capture element:', calcedTop, start, pulse.pos.dims.ot, captureOffset.top, cap.finalH, pulse.target.height());
+
+        /*
+        html2canvas(captureTarget[0], {
+            onrendered: function(oldCanvas) {
                 var img = new Image();
                 var newCanvas = document.createElement('CANVAS');
                 var ctx = newCanvas.getContext('2d');
-                newCanvas.width = dims.x;
-                newCanvas.height = dims.y;
+                newCanvas.width = cap.finalW;
+                newCanvas.height = cap.finalH;
 
                 img.onload = function (){
-                    ctx.drawImage(this, start.left, start.top, dims.x, dims.y, 0, 0, dims.x, dims.y);
+                    ctx.drawImage(this, start.left, start.top, cap.finalW, cap.finalH, 0, 0, cap.finalW, cap.finalH);
                     $('#pulse_preview').append(newCanvas);
                     $('#pulse_preview, #general_overlay').show();
                 }
@@ -465,10 +594,10 @@ var lev = new function(){
                 img.src = oldCanvas.toDataURL("image/png");
 
             }
-        });
+        }); */
     }
 
-    function returnDimensions(c){
+    function returnDimensions(c, x, y){
         var par = c.parent();
         if(par.css('position') != 'absolute')
             par.css('position', 'relative');
@@ -477,14 +606,25 @@ var lev = new function(){
         if(typeof op === 'undefined')
             op = {left:0, top:0};
 
-        return {
+        var retObj = {};
+
+        var dims = {
             w: c.innerWidth(),  // target inner width
             h: c.innerHeight(), // target inner height
             ol: c.offset().left, // target left relative to doocument
             ot: c.offset().top, // target top relative to doocument
             opl: op.left,
             opt: op.top
-        };
+        }
+
+        retObj.abs = {x: x, y: y};
+        retObj.rel = {x: (x - dims.ol), y:(y - dims.ot)};
+        retObj.spacing = {left: dims.ol - dims.opl, top: dims.ot - dims.opt};
+        retObj.opt = {left: retObj.rel.x + retObj.spacing.left, top: retObj.rel.y + retObj.spacing.top};
+        retObj.window = {w: $(window).width(), h: $(window).height()};
+        retObj.dims = dims;
+
+        return retObj;
     }
 
     function convertImgToBase64URL(url, outputFormat, callback){
@@ -525,8 +665,8 @@ var lev = new function(){
         var fam = [];
         var c = 0;
         while(go){
-            var classVal = current.attr('class');
-            if(classVal !== undefined) classVal = classVal.split(' ');
+            var classVal = $.trim(current.attr('class'));
+            if(classVal !== undefined) classVal = classVal.split(' +'); // look for one or more spaces
             var gen = {
                 tagName: current.prop("tagName").toLowerCase(),
                 class: classVal, //array
@@ -553,7 +693,7 @@ var lev = new function(){
             var eq = ':eq(' + f.index + ')';
             var allEq = '';
             if(i <= 1) allEq = eq;// if target or parent, then be specific
-            
+
             var className = (typeof f.class !== 'undefined' && $.trim(f.class) != '') ? '.' + f.class.join('.') : '';
             selector.byClass = f.tagName + className + allEq + ' ' + selector.byClass;
             selector.byTagName = f.tagName + allEq + ' ' + selector.byTagName;
@@ -564,193 +704,3 @@ var lev = new function(){
     }
 
 }
-
-//
-// function saveTagImages(){
-//     console.log('saveTagImages');
-//     // 1. save target
-//     if(pulse.tagType != 'img'){
-//         html2canvas(pulse.target, {
-//             background: '#ffffff',
-//             onrendered: function(canvas) {
-//                 saveTagImageProcess({
-//                     str: canvas.toDataURL(),
-//                     ext: 'png',
-//                     type: 'target',
-//                     fileID: pulse.id
-//                 });
-//             }
-//         });
-//     }
-//
-//     // 2. save generic image
-//     if(pulse.genericImgSrc != null){
-//         var img = new Image();
-//         img.setAttribute('crossOrigin', 'anonymous');
-//         var canvas = document.createElement('canvas');
-//         var ctx = canvas.getContext('2d');
-//
-//         img.onload = function(){
-//             canvas.width = this.width;
-//             canvas.height = this.height;
-//             ctx.drawImage(this, 0, 0);
-//             saveTagImageProcess({
-//                 str: canvas.toDataURL(),
-//                 ext: 'png',
-//                 type: 'generic',
-//                 fileID: pulse.id
-//             });
-//         }
-//         img.src = pulse.genericImgSrc
-//     }
-//
-// }
-//
-// function showPreviewMenu(){
-//     //tag_menu_preview
-//     $('#tag_menu_who, #tag_menu_content').hide();
-//     $('#tag_menu_preview').fadeIn(300);
-//     $('#preview_back_button').unbind().on('click', showWhoMenu);
-//
-//     pulse.meme = pulse.isMemeSaved = false;
-//
-//     pulse.tagType = pulse.target.prop("tagName").toLowerCase();
-//
-//     switch(pulse.tagType){
-//         case 'p':
-//         case 'span':
-//         case 'a':
-//         case 'h1':
-//         case 'h2':
-//         case 'h3':
-//         case 'h4':
-//         case 'img':
-//             createPulsePreview();
-//             break;
-//     }
-// }
-//
-// function createPulsePreview(){
-//     console.log('createPulsePreview');
-//
-//     // add canvas to document
-//     $('.tag_item_user_name').html('gscoon:');
-//     $('.tag_item_user_img').attr('src', 'images/users/1.jpg');
-//
-//     $('.tag_item_snippit_link').html(pulse.url);
-//
-//     if(pulse.tagType == 'img'){
-//         createImageMeme(pulse.target.attr('src'));
-//     }
-//     else if(pulse.genericImgSrc != null){
-//         $('.tag_item_thoughts').html(pulse.comment);
-//         createImageIcon(pulse.genericImgSrc);
-//         if(pulse.innerText != null && pulse.innerText != '')
-//             $('.tag_item_snippit_text').html(pulse.innerText).ellipsis();
-//     }
-//
-// }
-//
-// function createImageIcon(src){
-//     var previewContainer = $('#tag_menu_preview_container');
-//     var imageObj = new Image();
-//     var canvas = previewContainer.find('.tag_item_snippit_img')[0];
-//     imageObj.onload = function(){
-//         var imageRatio = this.width/this.height;
-//
-//         if(this.width>this.height){
-//             var squareLength = this.height;
-//             var newPos = {l:(this.width - this.height)/2, t:0};
-//         }
-//         else{
-//             var squareLength = this.width;
-//             var newPos = {l:0, t:(this.height - this.width)/2};
-//         }
-//
-//         var menuWidth = parseInt(pulse.menu.css('width'));
-//
-//         var canvasDims = {w: squareLength * imageRatio, h: squareLength * (1/imageRatio)};
-//
-//         var fontSize = 18;
-//         var iconLength = 100;
-//
-//         canvas.width =  iconLength;
-//         canvas.height = iconLength;
-//
-//         var context = canvas.getContext("2d");
-//         context.save();
-//
-//         context.drawImage(this, 0, 0, squareLength, squareLength, 0, 0, iconLength, iconLength);
-//     };
-//     imageObj.src = src;
-// }
-//
-// function createImageMeme(src){
-//     console.log('createImageMeme');
-//     var previewContainer = $('#tag_menu_preview_container');
-//     var imageObj = new Image();
-//     imageObj.setAttribute('crossOrigin', 'anonymous');
-//     var canvas = previewContainer.find('.tag_item_snippit_img')[0];
-//
-//     imageObj.onload = function(){
-//
-//         var imageRatio = this.width / this.height;
-//         var canvasDims = {w:previewContainer.innerWidth(), h:previewContainer.innerWidth() / imageRatio};
-//         console.log({canvasDims:canvasDims});
-//         canvas.width =  canvasDims.w;
-//         canvas.height = canvasDims.h;
-//
-//         var context = canvas.getContext("2d");
-//         context.save();
-//         context.drawImage(this, 0, 0, this.width, this.height, 0, 0, canvasDims.w, canvasDims.h);
-//
-//         // transparent overlay
-//         //context.fillStyle = "rgba(0, 0, 0, 0.70)";
-//         //context.fillRect(0, 0, canvasDims.w, canvasDims.h);
-//
-//         // restore to the default which was saved immediatlely
-//         context.restore();
-//
-//         var fontSize = 18;
-//         context.font = fontSize + "px Open Sans";
-//         context.shadowColor="black";
-//         context.shadowBlur=7;
-//         context.fillStyle  = "#ffffff";
-//         // context.textBaseline="top";
-//         context.textBaseline="hanging";
-//
-//         wrapText(context, pulse.comment, canvasDims.w * .05, canvasDims.h * .1, canvasDims.w * .9, fontSize * 1.25);
-//
-//         pulse.meme = canvas.toDataURL();
-//
-//         // gerren, this should make sure the tag is saved first saved...
-//         saveTagImageProcess({
-//             str: pulse.meme,
-//             ext: 'png',
-//             type: 'meme',
-//             fileID: pulse.id
-//         });
-//     }
-//
-//     imageObj.src = src;
-// }
-//
-// function wrapText(context, text, x, y, maxWidth, lineHeight) {
-//     var words = text.split(' ');
-//     var line = '';
-//
-//     for(var n = 0; n < words.length; n++) {
-//         var testLine = line + words[n] + ' ';
-//         var metrics = context.measureText(testLine);
-//         var testWidth = metrics.width;
-//         if (testWidth > maxWidth && n > 0) {
-//             context.fillText(line, x, y);
-//             line = words[n] + ' ';
-//             y += lineHeight;
-//         }
-//         else
-//             line = testLine;
-//
-//     }
-//     context.fillText(line, x, y);
-// }
