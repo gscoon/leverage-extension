@@ -33,13 +33,15 @@
             ],
             "js": [
                 "scripts/jquery.js",
-                "scripts/jPulse.js",
-                "scripts/contentscript.js",
-                "scripts/html2canvas.js",
-                "scripts/html2canvas.svg.js"
+                "scripts/cs_jPulse.js",
+                "scripts/cs_pulse.js",
+                "scripts/cs_discussion.js",
+                "scripts/cs_html2canvas.js",
+                "scripts/cs_html2canvas.svg.js"
             ],
             "css": [
-                "styles/style.css"
+                "styles/style.css",
+                "styles/discussion.css"
             ],
             "run_at": "document_end",
             "all_frames": false

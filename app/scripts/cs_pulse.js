@@ -1,10 +1,10 @@
 'use strict';
 
 window.onload = function(){
-    lev.start();
+    chickenPox.start();
 }
 
-var lev = new function(){
+var chickenPox =  new function(){
     var server = 'http://localhost:1111/';
     var processURL = server + 'process?which=';
 
@@ -18,10 +18,11 @@ var lev = new function(){
 
     var pulse = {
         menu: null,
+        isMenuActive: false,
         target: null,
         class: null,
         pos: {},
-        comment: '',
+        thoughts: '',
         innerText: '',
         url: window.location.href,
         id: null,
@@ -31,12 +32,15 @@ var lev = new function(){
         tagSaved: false,
         pointer: null,
         user:{
-            imgSmall:null
+            imgSmall:null,
+            imgLarge:null,
         }
     };
 
+    this.keys = {ctrl: 17, v: 86, c:67, f: 70, esc: 27, enter: 13};
+
     // used to maintain connection with background script
-    var chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
+    this.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
 
     this.start = function(){
         console.log('content script started');
@@ -47,7 +51,7 @@ var lev = new function(){
         // handle pulse menu
         pulse.menu = $('#tag_menu');
         if (pulse.menu.length == 0)
-            chromePort.postMessage({action:"menu"});
+            chickenPox.chromePort.postMessage({action:"menu"});
 
         // generic image?
         var generic = $('meta[property="og:image"]');
@@ -55,11 +59,11 @@ var lev = new function(){
             pulse.genericImgSrc = generic.attr('content');
 
         // get current page tags
-        chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
+        chickenPox.chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
     }
 
     function setChromeConnectionHandlers(){
-        chromePort.onMessage.addListener(function(message, sender){
+        chickenPox.chromePort.onMessage.addListener(function(message, sender){
             if(message.action === "menu")
                 handleMenuResponse(message);
             else if(message.action === 'saved_chain')
@@ -76,6 +80,10 @@ var lev = new function(){
                 handlePageTags(message);
             else if(message.action === 'convert_image')
                 handleCaptureRemoteResponse(message);
+            else if(message.action === 'undo_tag')
+                handleUndoTag(message);
+            else if(message.action === 'tag_content')
+                chickenPox.handleTagContent(message);
         });
     }
 
@@ -106,7 +114,7 @@ var lev = new function(){
         // save new chain
         $('#chain_menu_save_new_button').unbind().on('click', saveNewChain);
         $('#chain_menu_expanded_new_name').unbind().on('keyup', function(e){
-            if(e.keyCode == '13') saveNewChain();
+            if(e.keyCode == chickenPox.keys.enter) saveNewChain();
         });
 
         // delete chain
@@ -123,24 +131,24 @@ var lev = new function(){
     }
 
     function setEventHandlers(){
-        // on key press
-
-        var ctrlKey = 17, vKey = 86, cKey = 67, fKey = 70;
         $(window).on('keydown', function(e){
-            if(e.keyCode == ctrlKey){
+            if(e.keyCode == chickenPox.keys.ctrl){
                 if(ctrKeyPressed) return false;
                 console.log('control key pressed');
                 ctrKeyPressed = true;
                 $('a').addClass('disabled');
             }
-            else if(ctrKeyPressed && (e.keyCode == cKey || e.keyCode == vKey || e.keyCode == fKey)){
+            else if(ctrKeyPressed && (e.keyCode == chickenPox.keys.c || e.keyCode == chickenPox.keys.v || e.keyCode == chickenPox.keys.f)){
                 console.log('special key');
                 resetKeys();
+            }
+            else if(pulse.isMenuActive && e.keyCode == chickenPox.keys.esc){
+                undoPulse();
             }
         })
 
         $(window).on('keyup', function(e){
-            if(e.keyCode == ctrlKey){
+            if(e.keyCode == chickenPox.keys.ctrl){
                 console.log('control key released');
                 resetKeys();
             }
@@ -167,6 +175,7 @@ var lev = new function(){
             closePulse();
 
         pulse.target = $(e.target);
+        pulse.isMenuActive = true;
 
         // get the position of the target in different ways
         setFamilyTree();
@@ -252,13 +261,13 @@ var lev = new function(){
             url: pulse.url,
             share: '',
             pulseText: pulse.innerText,
-            thoughts: pulse.comment,
+            thoughts: pulse.thoughts,
             zoom: '',
             pulsePos: JSON.stringify(pulse.pos),
             family: JSON.stringify(pulse.family)
         };
         // send save message to bg script
-        chromePort.postMessage(data);
+        chickenPox.chromePort.postMessage(data);
     }
 
     function handleSavedTag(res){
@@ -270,16 +279,27 @@ var lev = new function(){
         }
     }
 
+    // undo tag
+    function undoPulse(){
+        var data = {
+            action:"socket",
+            which:'undo_tag',
+            id: pulse.id,
+        };
+        // send save message to bg script
+        closePulse();
+        chickenPox.chromePort.postMessage(data);
+    }
 
-    function undoSaveTag(){
-
+    function handleUndoTag(m){
+        console.log('handleUndoTag', m);
     }
 
     function closePulse(){
         $('.' + pulse.class).hide().css('visible','hidden');
         pulse.target.jPulse( "disable" );
         pulse.menu.hide();
-
+        pulse.isMenuActive = false;
     }
 
     function showMessageMenu(fade){
@@ -291,7 +311,7 @@ var lev = new function(){
             .hide()
             .unbind()
             .on('keyup', function(e){
-                if(e.keyCode == '13')
+                if(e.keyCode == chickenPox.keys.enter)
                     saveTagText();
             })
 
@@ -300,10 +320,8 @@ var lev = new function(){
             .val('')
             .attr('placeholder', 'Type what you\'re thinking...')
             .on('input', function(){
-                pulse.comment = this.value;
-
                 // expand to text area
-                if(this.value.length > 40){
+                if(this.value.length > 32){
                     $(this).hide();
                     $('#pulse_comment_textarea')
                         .show()
@@ -319,9 +337,9 @@ var lev = new function(){
     function saveTagText(){
         hideAllMenuContainers();
         $('#tag_menu_load_page, #tm_loader').show(); // show loader menu
-
-        var data = {thoughts: pulse.comment, id: pulse.id, action:"socket", which: 'save_tag_text'};
-        chromePort.postMessage(data);
+        pulse.thoughts = $(this).val();
+        var data = {thoughts: pulse.thoughts, id: pulse.id, action:"socket", which: 'save_tag_text'};
+        chickenPox.chromePort.postMessage(data);
     }
 
     function handleSavedTagText(res){
@@ -348,7 +366,7 @@ var lev = new function(){
             cID = $(this).find('input').val();
 
         var data = {chainID: cID, tagID: pulse.id, action:"socket", which: 'save_tag_chain'};
-        chromePort.postMessage(data);
+        chickenPox.chromePort.postMessage(data);
     }
 
     function handleSavedTagChain(res){
@@ -358,7 +376,7 @@ var lev = new function(){
             setTimeout(function(){
                 pulse.menu.fadeOut(200, function(){
                     // gerren
-                    setExistingTag(pulse.result);
+                    chickenPox.setExistingTag(pulse.result);
 
                     $('.' + pulse.class).hide().css('visible','hidden');
                     pulse.target.jPulse("disable");
@@ -382,7 +400,7 @@ var lev = new function(){
             return alert("Must be at least one character.")
 
         var req = {action: "socket", which: 'save_new_chain', chainName: chainName};
-        chromePort.postMessage(req);
+        chickenPox.chromePort.postMessage(req);
     }
 
     function handleNewChain(response){
@@ -398,7 +416,7 @@ var lev = new function(){
         if(!confirm('Are you sure you want to delete this')) return false;
         var cID = $(this).find('input').val();
         var req = {action: "socket", which: 'delete_chain', chainID: cID};
-        chromePort.postMessage(req);
+        chickenPox.chromePort.postMessage(req);
     }
 
     function handleDeletedChain(response){
@@ -407,43 +425,7 @@ var lev = new function(){
     }
 
     function handlePageTags(response){
-        setExistingTag(response.results);
-    }
-
-    function setExistingTag(tArray){
-        tArray.forEach(function(tag, i){
-            var famSelector = getFamilySelector(tag.family);
-            var classTarget = $($.trim(famSelector.byClass));
-            var indexTarget = $($.trim(famSelector.byIndex));
-            var tagTarget = $($.trim(famSelector.byTagName));
-            console.log('targets found', famSelector, 'index', indexTarget.length, 'class', classTarget.length, 'tag', tagTarget.length);
-
-            // which one are you going with??
-            var target = indexTarget;
-
-            //var pos = returnDimensions(target, tag.placement.abs.x, tag.placement.abs.y);
-
-            var psc = $('<div class="pulse_set_circle" id="psc_' + tag.tag_id + '"></div>');
-            var psb = $('<div class="pulse_set_bar" id="psc_' + tag.tag_id + '"></div>');
-
-            var par = target.parent();
-            if(par.css('position') != 'absolute')
-                par.css('position', 'relative');
-
-            par.append(psc);
-            //par.append(psb);
-
-            //classTarget.parent().css('backgroundColor', '#000000');
-
-            // circle
-            psc.css('top', tag.placement.opt.top - .5 * psc.height());
-            psc.css('left', tag.placement.opt.left - .5 * psc.width());
-
-            // bar
-            psb.css('top', tag.placement.opt.top - .5 * psb.height());
-            psb.css('left', tag.placement.dims.opl * -1);
-            psb.width($(window).width());
-        });
+        chickenPox.setExistingTag(response.results);
     }
 
     function startDOMCapture(){
@@ -614,7 +596,7 @@ var lev = new function(){
             var sendObj = {action: "convert_image", format: 'image/png', url: o.url, type: o.type, id: id};
             console.log('sendCaptureRemote', sendObj);
 
-            chromePort.postMessage(sendObj);
+            chickenPox.chromePort.postMessage(sendObj);
             cp.remote.count++;
         }
     }
@@ -753,23 +735,6 @@ var lev = new function(){
             c++;
         }
         pulse.family = fam;
-    }
-
-    function getFamilySelector(fArray){
-        var selector = {byTagName: '', byClass: '', byIndex: ''};
-
-        fArray.forEach(function(f, i){
-            var eq = ':eq(' + f.index + ')';
-            var allEq = '';
-            if(i <= 1) allEq = eq;// if target or parent, then be specific
-
-            var className = (typeof f.class !== 'undefined' && $.trim(f.class) != '') ? '.' + f.class.join('.') : '';
-            selector.byClass = f.tagName + className + allEq + ' ' + selector.byClass;
-            selector.byTagName = f.tagName + allEq + ' ' + selector.byTagName;
-            selector.byIndex = f.tagName + eq + ' ' + selector.byIndex;
-        });
-
-        return selector;
     }
 
 }

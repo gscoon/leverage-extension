@@ -1,0 +1,128 @@
+#active_discussion_container
+{
+    background-color: #fff;
+    width:380px;
+    height:380px;
+    padding:10px;
+    position:fixed;
+    box-shadow: -2px 0px 5px 2px rgba(0,0,0,0.36);
+    display: none;
+    right:0;
+    top:50%;
+    margin:-200px 0 0;
+    border-radius: 4px 0 0 4px;
+    font-family: 'Open Sans';
+}
+
+
+#active_discussion_body
+{
+	font-size:14px;
+	margin:0 0 5px;
+	padding:0 0 5px 0;
+    margin:0 0 5px;
+    border:#efefef solid;
+    border-width:0 0 1px;
+	color:#421332;
+    font-weight: bold;
+}
+
+#active_discussion_meta
+{
+    padding:0 0 5px 0;
+    margin:0 0 5px;
+    border:#efefef solid;
+    border-width:0 0 1px;
+}
+
+#active_discussion_tagger
+{
+    display:inline-block;
+    width:60px;
+}
+
+#active_discussion_tagger img
+{
+    width:50px;
+    height:50px;
+    border-radius: 3px;
+}
+
+#active_discussion_meta_right
+{
+    display:inline-block;
+    vertical-align: top;
+    width:280px;
+}
+
+#active_discussion_name
+{
+    font-size:13px;
+    color:#444;
+    padding:0 0 3px;
+}
+
+#active_discussion_url, #active_discussion_time
+{
+    color:#888;
+    font-size:12px;
+    padding:0;
+}
+
+#active_discussion_response
+{
+    position:absolute;
+    bottom:10px;
+    left:10px;
+    padding:10px 0 0 35px;
+    border:#ccc solid;
+    border-width:1px 0 0;
+    width:350px;
+}
+
+#active_discussion_response_img
+{
+    position: absolute;
+    left:0;
+    top:12px;
+}
+
+#active_discussion_outer
+{
+    background-color:#f2e5ee;
+}
+
+#active_discussion_response_input
+{
+    width:345px;
+    font-size:13px;
+    border:1px solid #ccc;
+    height:30px;
+    padding-left: 5px;
+    font-family: 'Open Sans';
+}
+
+.active_discussion_comment_image
+{
+    position:absolute;
+    left:0;
+    top:0;
+}
+
+.active_discussion_commentor
+{
+
+}
+
+.active_discussion_comment_row
+{
+    padding:0 0 0 35px;
+    position:relative;
+    border:#fff solid;
+    border-width:0 0 1px;
+}
+
+.active_discussion_comment_container
+{
+
+}
