@@ -1,9 +1,0 @@
-{ facebook: { id: '10101431456800907' } }
-
-CAAXpZAuFdXHoBACLTJCD2ZClgOdnLNGAFH1HtxxWVUfDrhFjl1yV9omZATHErsTopfy8R1hlWAAXXKyNUZBLOkv29Vxe7qmuSHeVLNoQnTJDDFZAmeYlVc4KBqOLEO61yDONI3ksqG0NSXjemh5MTli4vrKQOFg8xnXt4IQjPcyjaZCrZAyCvVYQqHQXXWBBaVZCZAZAKcxKv29QZDZD
-
-GET /v2.4/{user-context-id} HTTP/1.1
-Host: graph.facebook.com
-
-GET /v2.3/{user-id} HTTP/1.1
-Host: graph.facebook.com
