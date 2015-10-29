@@ -5,16 +5,15 @@ window.onload = function(){
 }
 
 var chickenPox =  new function(){
-    var server = 'http://localhost:1111/';
-    var processURL = server + 'process?which=';
+
+    this.config = {
+        chromePort: null,
+        lastPortCheck: null, // keep track of connection to bg script
+        portIntervalID: null
+    }
 
     var ctrKeyPressed = false;
-    var z = {
-        pulse: 999999999,
-        menu: 99999999999997,
-        menuX: 99999999999999,
-        select: 99999999999998
-    };
+    this.z = {pulse: 999999999, menu: 99999999999997, menuX: 99999999999999, select: 99999999999998};
 
     var pulse = {
         menu: null,
@@ -30,42 +29,62 @@ var chickenPox =  new function(){
         meme: false,
         isMemeSaved: false,
         tagSaved: false,
-        pointer: null,
-        user:{
-            imgSmall:null,
-            imgLarge:null,
-        }
+        pointer: null
     };
+
+    this.user = {}; // current user data
+
+    this.userImages = {}; // all users displayed...
 
     this.keys = {ctrl: 17, v: 86, c:67, f: 70, esc: 27, enter: 13};
 
-    // used to maintain connection with background script
-    this.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
-
     this.start = function(){
         console.log('content script started');
-
-        setChromeConnectionHandlers();
+        handleBGConnection();
         setEventHandlers();
-
-        // handle pulse menu
-        pulse.menu = $('#tag_menu');
-        if (pulse.menu.length == 0)
-            chickenPox.chromePort.postMessage({action:"menu"});
 
         // generic image?
         var generic = $('meta[property="og:image"]');
         if(generic.length > 0)
             pulse.genericImgSrc = generic.attr('content');
 
-        // get current page tags
-        chickenPox.chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
     }
 
-    function setChromeConnectionHandlers(){
-        chickenPox.chromePort.onMessage.addListener(function(message, sender){
+    function handleBGConnection(){
+        // used to maintain connection with background script
+        chickenPox.config.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
+        setChromeConnectionListener();
+
+        // handle pulse menu
+        chickenPox.config.chromePort.postMessage({action:"menu"});
+        chickenPox.config.chromePort.postMessage({action:"user"});
+
+        // if it's been more than 10 seconds reestablish connection
+        if(chickenPox.config.portIntervalID != null) clearInterval(chickenPox.config.portIntervalID);
+        chickenPox.config.portIntervalID = setInterval(function(){
+            var establishConn = false;
+            var last = new Date(chickenPox.config.lastPortCheck);
+            if(Date.now() - last.getTime() > 10000){
+                console.log(Date.now() - last.getTime());
+                // reestablish connection
+                console.log('reestablish connection');
+                chickenPox.config.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
+                setChromeConnectionListener();
+            }
+
+        }, 7000);
+    }
+
+    function setChromeConnectionListener(){
+        chickenPox.config.chromePort.onMessage.addListener(function(message, sender){
             if(message.action === "menu")
                 handleMenuResponse(message);
+            else if(message.action === 'user')
+                handleUser(message);
+            else if(message.action === 'checkup')
+                handleCheckup(message);
+            else if(message.action === 'tag_content')
+                chickenPox.handleTagContent(message);
             else if(message.action === 'saved_chain')
                 handleNewChain(message);
             else if(message.action === 'saved_tag')
@@ -84,6 +103,8 @@ var chickenPox =  new function(){
                 handleUndoTag(message);
             else if(message.action === 'tag_content')
                 chickenPox.handleTagContent(message);
+            else if(message.action === 'delete_discussion_tag')
+                chickenPox.handleDiscussionDelete(message);
         });
     }
 
@@ -94,9 +115,11 @@ var chickenPox =  new function(){
         // add menu to html body
         $('body').append(response.menu);
         pulse.menu = $('#tag_menu');
-        $('#x').unbind().on('click', closePulse).css('zIndex', z.menuX);
 
-        pulse.user.imgSmall = $('#pulse_user_image').attr('src');
+        chickenPox.doCSSTricks(pulse.menu, 'menu');
+
+        $('#x').unbind().on('click', closePulse).css('zIndex', chickenPox.z.menuX);
+
         pulse.pointer = $('#pulse_pointer');
 
         // save chain when these anchors are clicked
@@ -128,6 +151,15 @@ var chickenPox =  new function(){
             $(this).hide();
             $('#pulse_preview').fadeOut(300);
         })
+    }
+
+    function handleUser(response){
+        console.log('handleUser', response.user);
+        $.extend(chickenPox.user, response.user);
+        chickenPox.userImages[chickenPox.user.user_id] = chickenPox.user.images;
+
+        // get current page tags
+        chickenPox.config.chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
     }
 
     function setEventHandlers(){
@@ -164,8 +196,6 @@ var chickenPox =  new function(){
 
     }
 
-
-
     // create annotation / pulse
     function pulsate(e){
         if(!ctrKeyPressed)
@@ -194,7 +224,7 @@ var chickenPox =  new function(){
         var options = {
             interval: 300,
             size:70,
-            zIndex: z.pulse,
+            zIndex: chickenPox.z.pulse,
             left: pulse.pos.opt.left,
             top: pulse.pos.opt.top,
             class: pulse.class
@@ -219,11 +249,15 @@ var chickenPox =  new function(){
 
         pulse.pointer.find('#pp_icon').attr('class', 'pp_text');
 
-        $('#tag_menu_content').show(); // need this to get accurate width below
+        // set image
+        $('#pulse_user_image').attr('src', chickenPox.user.images.small);
+
+        // need this to get accurate width below
+        $('#tag_menu_content').show();
         var mw = pulse.menu.width();
 
         // figure out where place menu
-        var menuPos = {top: y - 48/2, zIndex: z.menu};
+        var menuPos = {top: y - 48/2, zIndex: chickenPox.z.menu};
 
         // if pulse is on the right side of the screen
         if(pulse.pos.window.w / 2 < x){
@@ -267,15 +301,15 @@ var chickenPox =  new function(){
             family: JSON.stringify(pulse.family)
         };
         // send save message to bg script
-        chickenPox.chromePort.postMessage(data);
+        chickenPox.config.chromePort.postMessage(data);
     }
 
     function handleSavedTag(res){
         if(res.success){
             pulse.tagSaved = true;
             pulse.id = res.id;
-            pulse.result = res.result; //used later to place permanently
-            //saveTagImages();
+            pulse.saved = res.result[0]; //used later to place permanently
+            pulse.saved.name = chickenPox.user.name;
         }
     }
 
@@ -288,7 +322,7 @@ var chickenPox =  new function(){
         };
         // send save message to bg script
         closePulse();
-        chickenPox.chromePort.postMessage(data);
+        chickenPox.config.chromePort.postMessage(data);
     }
 
     function handleUndoTag(m){
@@ -312,7 +346,7 @@ var chickenPox =  new function(){
             .unbind()
             .on('keyup', function(e){
                 if(e.keyCode == chickenPox.keys.enter)
-                    saveTagText();
+                    saveTagText.call(this);
             })
 
         $('#pulse_comment_input')
@@ -338,8 +372,11 @@ var chickenPox =  new function(){
         hideAllMenuContainers();
         $('#tag_menu_load_page, #tm_loader').show(); // show loader menu
         pulse.thoughts = $(this).val();
+
         var data = {thoughts: pulse.thoughts, id: pulse.id, action:"socket", which: 'save_tag_text'};
-        chickenPox.chromePort.postMessage(data);
+
+        console.log('thoughts', data);
+        chickenPox.config.chromePort.postMessage(data);
     }
 
     function handleSavedTagText(res){
@@ -366,7 +403,10 @@ var chickenPox =  new function(){
             cID = $(this).find('input').val();
 
         var data = {chainID: cID, tagID: pulse.id, action:"socket", which: 'save_tag_chain'};
-        chickenPox.chromePort.postMessage(data);
+        chickenPox.config.chromePort.postMessage(data);
+        pulse.saved.chain_id = cID;
+        pulse.saved.chain_name = chickenPox.user.chains[cID].name;
+        console.log('chain name', chickenPox.user.chains[cID], chickenPox.user.chains[cID].name)
     }
 
     function handleSavedTagChain(res){
@@ -376,7 +416,9 @@ var chickenPox =  new function(){
             setTimeout(function(){
                 pulse.menu.fadeOut(200, function(){
                     // gerren
-                    chickenPox.setExistingTag(pulse.result);
+                    pulse.saved.thoughts = pulse.thoughts;
+                    console.log('pulse.saved', pulse.saved);
+                    chickenPox.setExistingTag([pulse.saved]);
 
                     $('.' + pulse.class).hide().css('visible','hidden');
                     pulse.target.jPulse("disable");
@@ -400,11 +442,13 @@ var chickenPox =  new function(){
             return alert("Must be at least one character.")
 
         var req = {action: "socket", which: 'save_new_chain', chainName: chainName};
-        chickenPox.chromePort.postMessage(req);
+        chickenPox.config.chromePort.postMessage(req);
     }
 
     function handleNewChain(response){
-        saveTagChain(response.chainID);
+        console.log('handleNewChain', response);
+        saveTagChain(response.chain.chain_id);
+        chickenPox.user.chain[response.chain.chain_id] = response.chain;
     }
 
     function cancelNewChain(){
@@ -416,7 +460,7 @@ var chickenPox =  new function(){
         if(!confirm('Are you sure you want to delete this')) return false;
         var cID = $(this).find('input').val();
         var req = {action: "socket", which: 'delete_chain', chainID: cID};
-        chickenPox.chromePort.postMessage(req);
+        chickenPox.config.chromePort.postMessage(req);
     }
 
     function handleDeletedChain(response){
@@ -428,12 +472,23 @@ var chickenPox =  new function(){
         chickenPox.setExistingTag(response.results);
     }
 
+    // Image capture... Way too long
+    // 1. startDOMCapture               Set capture properties like min width, max, etc
+    // 2. determineCaptureDimensions
+    // 3. handleCaptureCrop             if necessary,...
+    // beginning of 3 step process to handle remote images
+    // 4. handleCaptureRemoteImages     start it up
+    // 5. remoteImageCaptureCheck       check to see if item is an image
+    // 6. sendCaptureRemote             send image url to bg script
+    // 7. handleCaptureRemoteResponse   callback from bg script
+    // 8. finishDOMCapture              finally run the html2canvas script
+
     function startDOMCapture(){
         pulse.cProp = {
             target: pulse.target,
             minW: 400,
             minH: 150,
-            maxW: 800,
+            maxW: 1000,
             maxH: 600,
             defaultW: 600,
             defaultH: 400,
@@ -452,7 +507,7 @@ var chickenPox =  new function(){
 
         var cProp = pulse.cProp;
         cProp.timing['start'] = +new Date() / 1000;  // log start timestamp
-        handleCaptureDetails();
+        determineCaptureDimensions();
         cProp.timing['dets'] = +new Date() / 1000 - cProp.timing['start'];  // log start timestamp
         handleCaptureCrop();
         cProp.timing['crop'] = +new Date() / 1000 - cProp.timing['start'];  // log start timestamp
@@ -460,7 +515,7 @@ var chickenPox =  new function(){
 
     }
 
-    function handleCaptureDetails(){
+    function determineCaptureDimensions(){
         var cProp = pulse.cProp;
 
         while(true){
@@ -503,7 +558,7 @@ var chickenPox =  new function(){
             cProp.target = cProp.target.parent();
         }
 
-        console.log('handleCaptureDetails:', cProp);
+        console.log('determineCaptureDimensions:', cProp);
     }
 
     function handleCaptureCrop(){
@@ -594,9 +649,8 @@ var chickenPox =  new function(){
             cp.remote.existing[o.type + o.url] = id; // add it to the existing list
 
             var sendObj = {action: "convert_image", format: 'image/png', url: o.url, type: o.type, id: id};
-            console.log('sendCaptureRemote', sendObj);
 
-            chickenPox.chromePort.postMessage(sendObj);
+            chickenPox.config.chromePort.postMessage(sendObj);
             cp.remote.count++;
         }
     }
@@ -612,17 +666,17 @@ var chickenPox =  new function(){
         pulse.cProp.remote.completed++;
         if(pulse.cProp.remote.completed == pulse.cProp.remote.count)
             finishDOMCapture();
-
-        console.log('handleCaptureRemoteResponse', r);
     }
 
     function finishDOMCapture(){
-        console.log('start capture rendering');
         var cp = pulse.cProp;
         cp.timing['remote'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
         var bgColor = $('body').css("background-color");
 
         html2canvas(cp.target[0], {
+            background: getMyBackgroundColor(cp.target),
+            allowTaint: true,
+            logging: true,
             onrendered: function(oldCanvas) {
                 cp.timing['render'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
                 var img = new Image();
@@ -633,18 +687,26 @@ var chickenPox =  new function(){
 
                 img.onload = function (){
                     ctx.drawImage(this, cp.start.left, cp.start.top, cp.finalW, cp.finalH, 0, 0, cp.finalW, cp.finalH);
+
+                    var req = {
+                        action: "socket",
+                        which: "save_image",
+                        imageType: "target",
+                        dataURL: newCanvas.toDataURL("image/png"),
+                        ext: 'png',
+                        tagID: pulse.saved.tag_id,
+                        fileID: pulse.saved.file_id
+                    }
+                    chickenPox.config.chromePort.postMessage(req);
+
                     $('#pulse_preview').append(newCanvas);
                     $('#pulse_preview, #general_overlay').show();
                     cp.timing['end'] = +new Date() / 1000 - cp.timing['start'];  // log start timestamp
-                    console.log(cp.timing);
                 }
 
                 img.src = oldCanvas.toDataURL("image/png");
 
-            },
-            background: bgColor,
-            allowTaint: true,
-            logging: true
+            }
         });
     }
 
@@ -676,6 +738,24 @@ var chickenPox =  new function(){
         retObj.dims = dims;
 
         return retObj;
+    }
+
+    function getMyBackgroundColor(t){
+        var current = t;
+        var go = true;
+        var blank = "rgba(0, 0, 0, 0)";
+        while (go){
+            var bg = current.css('background-color');
+
+            if(bg != blank) return bg;
+
+            if(current.prop("tagName").toLowerCase() == 'body')
+                go = false;
+            else
+                current = current.parent();
+        }
+
+        return "rgb(255,255,255)"; // return white
     }
 
     function convertImgToBase64URL(url, outputFormat, callback){
@@ -737,4 +817,17 @@ var chickenPox =  new function(){
         pulse.family = fam;
     }
 
+    function handleCheckup(r){
+        // update the check last port with the value from the bg script
+        // this is send periodically from the bg script
+        chickenPox.config.lastPortCheck = r.time;
+        //console.log('checkup', r);
+    }
+
+    this.doCSSTricks = function(ele, type){
+        if(type == 'menu')
+            ele.find('*').css({'line-height': 'normal', 'box-sizing':'initial'});
+        else if(type == 'circle')
+            ele.css({'padding': '0px', 'margin':'0px'});
+    }
 }

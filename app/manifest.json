@@ -11,9 +11,10 @@
     "background": {
         "scripts": [
             "scripts/jquery.js",
-            "scripts/chromereload.js",
-            "scripts/socket.io.js",
-            "scripts/background.js"
+            "scripts/bg.chromereload.js",
+            "scripts/bg.socket.io.js",
+            "scripts/moment.min.js",
+            "scripts/bg.js"
         ]
     },
     "browser_action": {
@@ -33,11 +34,12 @@
             ],
             "js": [
                 "scripts/jquery.js",
-                "scripts/cs_jPulse.js",
-                "scripts/cs_pulse.js",
-                "scripts/cs_discussion.js",
-                "scripts/cs_html2canvas.js",
-                "scripts/cs_html2canvas.svg.js"
+                "scripts/cs.jPulse.js",
+                "scripts/cs.pulse.js",
+                "scripts/cs.discussion.js",
+                "scripts/moment.min.js",
+                "scripts/cs.html2canvas.js",
+                "scripts/cs.html2canvas.svg.js"
             ],
             "css": [
                 "styles/style.css",

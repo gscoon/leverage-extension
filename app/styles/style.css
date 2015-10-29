@@ -257,12 +257,14 @@ input#pulse_comment_input::-webkit-input-placeholder{
     height:25px;
 }
 
-.pulse_set_bar, .pulse_set_circle
+div.pulse_set_bar, div.pulse_set_circle
 {
     height:30px;
     background-color:#993175;
     position:absolute;
     z-index:99999999;
+    margin:0; !important;
+    padding-bottom:0; !important;
 }
 
 .pulse_set_bar
