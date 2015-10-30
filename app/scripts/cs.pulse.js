@@ -6,7 +6,7 @@ window.onload = function(){
 
 var chickenPox =  new function(){
 
-    this.config = {
+    this.main = {
         chromePort: null,
         lastPortCheck: null, // keep track of connection to bg script
         portIntervalID: null
@@ -25,7 +25,6 @@ var chickenPox =  new function(){
         innerText: '',
         url: window.location.href,
         id: null,
-        genericImgSrc: null,
         meme: false,
         isMemeSaved: false,
         tagSaved: false,
@@ -42,41 +41,20 @@ var chickenPox =  new function(){
         console.log('content script started');
         handleBGConnection();
         setEventHandlers();
-
-        // generic image?
-        var generic = $('meta[property="og:image"]');
-        if(generic.length > 0)
-            pulse.genericImgSrc = generic.attr('content');
-
     }
 
     function handleBGConnection(){
         // used to maintain connection with background script
-        chickenPox.config.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
+        chickenPox.main.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
         setChromeConnectionListener();
 
         // handle pulse menu
-        chickenPox.config.chromePort.postMessage({action:"menu"});
-        chickenPox.config.chromePort.postMessage({action:"user"});
-
-        // if it's been more than 10 seconds reestablish connection
-        if(chickenPox.config.portIntervalID != null) clearInterval(chickenPox.config.portIntervalID);
-        chickenPox.config.portIntervalID = setInterval(function(){
-            var establishConn = false;
-            var last = new Date(chickenPox.config.lastPortCheck);
-            if(Date.now() - last.getTime() > 10000){
-                console.log(Date.now() - last.getTime());
-                // reestablish connection
-                console.log('reestablish connection');
-                chickenPox.config.chromePort = chrome.runtime.connect({name:"pulsecontentscript"});
-                setChromeConnectionListener();
-            }
-
-        }, 7000);
+        chickenPox.main.chromePort.postMessage({action:"menu"});
+        chickenPox.main.chromePort.postMessage({action:"user"});
     }
 
     function setChromeConnectionListener(){
-        chickenPox.config.chromePort.onMessage.addListener(function(message, sender){
+        chickenPox.main.chromePort.onMessage.addListener(function(message, sender){
             if(message.action === "menu")
                 handleMenuResponse(message);
             else if(message.action === 'user')
@@ -99,6 +77,8 @@ var chickenPox =  new function(){
                 handlePageTags(message);
             else if(message.action === 'convert_image')
                 handleCaptureRemoteResponse(message);
+            else if(message.action === 'convert_image2')
+                handlePageImageResponse(message);
             else if(message.action === 'undo_tag')
                 handleUndoTag(message);
             else if(message.action === 'tag_content')
@@ -159,7 +139,7 @@ var chickenPox =  new function(){
         chickenPox.userImages[chickenPox.user.user_id] = chickenPox.user.images;
 
         // get current page tags
-        chickenPox.config.chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
+        chickenPox.main.chromePort.postMessage({action: "socket", which: 'get_page_tags', url: window.location.href});
     }
 
     function setEventHandlers(){
@@ -301,7 +281,7 @@ var chickenPox =  new function(){
             family: JSON.stringify(pulse.family)
         };
         // send save message to bg script
-        chickenPox.config.chromePort.postMessage(data);
+        chickenPox.main.chromePort.postMessage(data);
     }
 
     function handleSavedTag(res){
@@ -310,6 +290,8 @@ var chickenPox =  new function(){
             pulse.id = res.id;
             pulse.saved = res.result[0]; //used later to place permanently
             pulse.saved.name = chickenPox.user.name;
+            // save favicon and generic
+            handlePageImages();
         }
     }
 
@@ -322,7 +304,7 @@ var chickenPox =  new function(){
         };
         // send save message to bg script
         closePulse();
-        chickenPox.config.chromePort.postMessage(data);
+        chickenPox.main.chromePort.postMessage(data);
     }
 
     function handleUndoTag(m){
@@ -376,7 +358,7 @@ var chickenPox =  new function(){
         var data = {thoughts: pulse.thoughts, id: pulse.id, action:"socket", which: 'save_tag_text'};
 
         console.log('thoughts', data);
-        chickenPox.config.chromePort.postMessage(data);
+        chickenPox.main.chromePort.postMessage(data);
     }
 
     function handleSavedTagText(res){
@@ -403,7 +385,7 @@ var chickenPox =  new function(){
             cID = $(this).find('input').val();
 
         var data = {chainID: cID, tagID: pulse.id, action:"socket", which: 'save_tag_chain'};
-        chickenPox.config.chromePort.postMessage(data);
+        chickenPox.main.chromePort.postMessage(data);
         pulse.saved.chain_id = cID;
         pulse.saved.chain_name = chickenPox.user.chains[cID].name;
         console.log('chain name', chickenPox.user.chains[cID], chickenPox.user.chains[cID].name)
@@ -442,7 +424,7 @@ var chickenPox =  new function(){
             return alert("Must be at least one character.")
 
         var req = {action: "socket", which: 'save_new_chain', chainName: chainName};
-        chickenPox.config.chromePort.postMessage(req);
+        chickenPox.main.chromePort.postMessage(req);
     }
 
     function handleNewChain(response){
@@ -460,7 +442,7 @@ var chickenPox =  new function(){
         if(!confirm('Are you sure you want to delete this')) return false;
         var cID = $(this).find('input').val();
         var req = {action: "socket", which: 'delete_chain', chainID: cID};
-        chickenPox.config.chromePort.postMessage(req);
+        chickenPox.main.chromePort.postMessage(req);
     }
 
     function handleDeletedChain(response){
@@ -637,8 +619,7 @@ var chickenPox =  new function(){
         var cp = pulse.cProp;
         var dataTag = 'data-pulse-convert-' + o.type;
         // check if full url
-        if(o.url.split('//') == 1)
-            o.url = window.location.protocol + '//' + window.location.hostname + o.url;
+        o.url = returnAbsoluteURL(o.url);
 
         // existing image
         if(typeof cp.remote.existing[o.type + o.url] !== 'undefined')
@@ -650,7 +631,7 @@ var chickenPox =  new function(){
 
             var sendObj = {action: "convert_image", format: 'image/png', url: o.url, type: o.type, id: id};
 
-            chickenPox.config.chromePort.postMessage(sendObj);
+            chickenPox.main.chromePort.postMessage(sendObj);
             cp.remote.count++;
         }
     }
@@ -688,16 +669,8 @@ var chickenPox =  new function(){
                 img.onload = function (){
                     ctx.drawImage(this, cp.start.left, cp.start.top, cp.finalW, cp.finalH, 0, 0, cp.finalW, cp.finalH);
 
-                    var req = {
-                        action: "socket",
-                        which: "save_image",
-                        imageType: "target",
-                        dataURL: newCanvas.toDataURL("image/png"),
-                        ext: 'png',
-                        tagID: pulse.saved.tag_id,
-                        fileID: pulse.saved.file_id
-                    }
-                    chickenPox.config.chromePort.postMessage(req);
+                    //pulse.saved.meta_images.target = true;
+                    savePageImage("target", newCanvas.toDataURL("image/png"));
 
                     $('#pulse_preview').append(newCanvas);
                     $('#pulse_preview, #general_overlay').show();
@@ -768,10 +741,51 @@ var chickenPox =  new function(){
             canvas.width = this.width;
             ctx.drawImage(this, 0, 0);
             var dataURL = canvas.toDataURL(outputFormat);
-            callback(dataURL);
+            onSuccess(dataURL);
             canvas = null;
         };
+
+        img.onerror = callback.bind(null, false);
+
         img.src = url;
+    }
+
+    function handlePageImages(){
+        // favicons first
+        var favURL = returnAbsoluteURL('/favicon.ico');
+        var sendObj = {action: "convert_image2", format: 'image/png', url: favURL, type: 'favicon'};
+        var favMeta = $('link[rel="shortcut icon"]');
+        if(favMeta.length > 0){
+            var favMetaURL = returnAbsoluteURL(favMeta.attr('href'));
+            sendObj.url = [favURL, favMetaURL];
+        }
+        chickenPox.main.chromePort.postMessage(sendObj);
+
+        // generic image?
+        var generic = $('meta[property="og:image"]');
+        if(generic.length > 0){
+            var url = returnAbsoluteURL(generic.attr('content'));
+            var sendObj = {action: "convert_image2", format: 'image/png', url: url, type: 'generic'};
+            chickenPox.main.chromePort.postMessage(sendObj);
+        }
+    }
+
+    function handlePageImageResponse(r){
+        console.log('handlePageImageResponse', r.type, r.dataURL == true);
+        if(r.dataURL)
+            savePageImage(r.type, r.dataURL);
+    }
+
+    function savePageImage(whichImage, dataURL){
+        var req = {
+            action: "socket",
+            which: "save_image",
+            imageType: whichImage,
+            dataURL: dataURL,
+            tagID: pulse.saved.tag_id,
+            fileID: pulse.saved.file_id
+        }
+        chickenPox.main.chromePort.postMessage(req);
     }
 
     function extend(a, b){
@@ -820,8 +834,20 @@ var chickenPox =  new function(){
     function handleCheckup(r){
         // update the check last port with the value from the bg script
         // this is send periodically from the bg script
-        chickenPox.config.lastPortCheck = r.time;
+        chickenPox.main.lastPortCheck = r.time;
         //console.log('checkup', r);
+    }
+
+    function returnAbsoluteURL(url){
+        var h = 'http';
+        console.log('start abs url', url, url.split('//'));
+        if(url.split('//').length == 1) // if it's a relative url
+            url = window.location.protocol + '//' + window.location.hostname + url;
+        else if(url.substring(0, h.length) !== h)
+            url = window.location.protocol + url;
+
+        console.log('end abs url', url);
+        return url;
     }
 
     this.doCSSTricks = function(ele, type){

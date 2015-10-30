@@ -11,7 +11,7 @@ var bg = new function(){
         user: null,
         callbackObj: {},
         ports:[],
-        checkupInterval: null
+        contentCheckupInterval: null
     }
 
     window.onload = start;
@@ -22,8 +22,6 @@ var bg = new function(){
 
         // listen to all connections from content scripts
         chrome.runtime.onConnect.addListener(connectionListener);
-
-        startCheckup();
     }
 
     function storageCallback(ret){
@@ -42,17 +40,10 @@ var bg = new function(){
     }
 
     function connectionListener(port){
-
-        console.log('port connection established', port);
-
-        var portIndex = config.ports.push(port) - 1; // gerren, this could get ugly
-
+        // listen for messages from content script
         port.onMessage.addListener(function(request) {
-            //console.log('action',request.action);
-            if(request.action){
-                if (request.action == "capture")
-                    port.postMessage({farewell: "gotcha"});
-                else if (request.action == "menu")
+            if("action" in request){
+                if (request.action == "menu")
                     port.postMessage({action:'menu', menu: config.menuHTML});
                 else if (request.action == "user")
                     port.postMessage({action:'user', user: config.user});
@@ -61,9 +52,9 @@ var bg = new function(){
                         port.postMessage(d);
                     });
                 }
-                else if(request.action == "convert_image"){
+                else if(request.action == "convert_image" || request.action == "convert_image2"){
                     convertImgToBase64URL(request, function(dURL){
-                        console.log('convert', dURL);
+                        console.log('convert', dURL, request.type);
                         request.dataURL = dURL;
                         port.postMessage(request);
                     });
@@ -73,8 +64,9 @@ var bg = new function(){
 
         port.onDisconnect.addListener(function(p) {
             console.log('disconnected port');
-            port = null;
-            config.ports[portIndex] = null;
+            // port = config.ports[portIndex] = null;
+            // if you splice, you mess up port index
+            //config.ports.splice(portIndex);
         });
     }
 
@@ -144,19 +136,6 @@ var bg = new function(){
         config.socket.emit(req.which, req);
     }
 
-    function startCheckup(){
-        config.checkupInterval = setInterval(function(){
-            console.log(config.ports);
-            config.ports.forEach(function(p, i){
-
-                if(p && p.sender.tab.active){
-                    console.log('checkupInterval', i, p);
-                    p.postMessage({action:'checkup', message: 'check', time: moment().format('MMMM D, YYYY HH:mm:ss')});
-                }
-            });
-        }, 5000);
-    }
-
     this.showFacebookAuth = function(){
         chrome.windows.create({
             'url': serverURL + 'auth/pre-fb?extID=' + config.extID,
@@ -178,6 +157,17 @@ var bg = new function(){
 
     function convertImgToBase64URL(req, callback){
         var img = new Image();
+        var retry = null;
+        var url = null
+        if(typeof req.url === 'object'){ // it's an array
+            req.urlIndex = (typeof req.urlIndex === 'undefined')?0:req.urlIndex+1;
+            url = req.url[req.urlIndex];
+            if((req.urlIndex + 1) < req.url.length)
+                retry = convertImgToBase64URL.bind(null, req, callback);
+        }
+        else
+            url = req.url
+              
         img.crossOrigin = 'Anonymous';
         img.onload = function(){
             var canvas = document.createElement('CANVAS'),
@@ -191,10 +181,14 @@ var bg = new function(){
         };
 
         img.onerror = function(){
-            callback("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="); // blank gif
+            if(retry != null)
+                retry();
+            else
+                callback(false);
         }
 
-        img.src = req.url;
+        console.log('convertImgURL', url);
+        img.src = url;
     }
 
     function genRandomID(len){

@@ -80,7 +80,7 @@
 
         $('#active_discussion_delete').unbind().on('click',function(){
             if(confirm('Are you sure you want to delete this tag?')){
-                cp.config.chromePort.postMessage({action: "socket", which: 'delete_discussion_tag', id: cp.pox.active.tag_id});
+                cp.main.chromePort.postMessage({action: "socket", which: 'delete_discussion_tag', id: cp.pox.active.tag_id});
             }
         });
 
@@ -106,7 +106,7 @@
                 saveDiscComment.call(this);
         }).focus();
 
-        cp.config.chromePort.postMessage({action: "socket", which: 'get_tag_content', tagID: id});
+        cp.main.chromePort.postMessage({action: "socket", which: 'get_tag_content', tagID: id});
     }
 
     function displayDisussionComments(cArray){
@@ -161,7 +161,7 @@
         if(c.body == '') return console.log('Empty input');
         $(this).val('');
         // send save object
-        cp.config.chromePort.postMessage(c);
+        cp.main.chromePort.postMessage(c);
 
         displayDisussionComments([c]);
     }
