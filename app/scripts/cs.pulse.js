@@ -273,6 +273,7 @@ var chickenPox =  new function(){
             action:"socket",
             which:'save_tag',
             url: pulse.url,
+            pageTitle: document.title,
             share: '',
             pulseText: pulse.innerText,
             thoughts: pulse.thoughts,
