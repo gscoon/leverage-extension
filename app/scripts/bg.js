@@ -14,6 +14,11 @@ var bg = new function(){
         contentCheckupInterval: null
     }
 
+    chrome.browserAction.onClicked.addListener(function(activeTab){
+        var feedURL = 'http://localhost:1111/feed';
+        chrome.tabs.create({ url: feedURL });
+    });
+
     window.onload = start;
 
     function start(){
@@ -59,6 +64,10 @@ var bg = new function(){
                         port.postMessage(request);
                     });
                 }
+                else if(request.action == "get_feed"){
+                    var res = {action:'feed'}
+                    port.postMessage(res);
+                }
             }
         });
 
@@ -84,8 +93,6 @@ var bg = new function(){
             // listen for user information based on extension id
             config.socket.on('menu', handleMenu);
             config.socket.on('user', handleUserResults);
-            config.socket.on('auth_status', handleAuthUpdate);
-            config.socket.on('content', handleContent);
             config.socket.on('callback', handleSocketCallback);
         });
 
@@ -115,18 +122,6 @@ var bg = new function(){
             }
         }
 
-        function handleAuthUpdate(data){
-            console.log('handleAuthUpdate: ', data);
-            //close auth window
-            chrome.windows.remove(config.authWindow.id);
-            setTimeout(function(){
-                config.socket.emit('get_content', config.extID);
-            }, 1000);
-        }
-
-        function handleContent(data){
-            console.log(data);
-        }
     }  // end of socket name space
 
     function sendSocketMessage(req, callback){
@@ -167,7 +162,7 @@ var bg = new function(){
         }
         else
             url = req.url
-              
+
         img.crossOrigin = 'Anonymous';
         img.onload = function(){
             var canvas = document.createElement('CANVAS'),

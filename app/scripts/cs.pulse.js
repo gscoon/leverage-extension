@@ -12,6 +12,8 @@ var chickenPox =  new function(){
         portIntervalID: null
     }
 
+    var feedURL = 'http://localhost:1111/feed';
+
     var ctrKeyPressed = false;
     this.z = {pulse: 999999999, menu: 99999999999997, menuX: 99999999999999, select: 99999999999998};
 
@@ -41,6 +43,7 @@ var chickenPox =  new function(){
         console.log('content script started');
         handleBGConnection();
         setEventHandlers();
+        feedCheck();
     }
 
     function handleBGConnection(){
@@ -81,11 +84,28 @@ var chickenPox =  new function(){
                 handlePageImageResponse(message);
             else if(message.action === 'undo_tag')
                 handleUndoTag(message);
-            else if(message.action === 'tag_content')
-                chickenPox.handleTagContent(message);
             else if(message.action === 'delete_discussion_tag')
                 chickenPox.handleDiscussionDelete(message);
+            else if(message.action === 'feed')
+                handleFeed(message);
         });
+    }
+
+    function feedCheck(){
+        // ask for feed
+        console.log(pulse.url, feedURL);
+        if(pulse.url == feedURL){
+            chickenPox.main.chromePort.postMessage({action:"socket", which:'get_feed'});
+            console.log('feed request');
+        }
+
+    }
+
+    function handleFeed(res){
+        console.log('handleFeed');
+        $('body').html(res.feed);
+        $('.feed_response_input_img').attr('src', chickenPox.user.images.small);
+        chickenPox.updateTimeSince();
     }
 
     // menu received from bg script
@@ -279,7 +299,8 @@ var chickenPox =  new function(){
             thoughts: pulse.thoughts,
             zoom: '',
             pulsePos: JSON.stringify(pulse.pos),
-            family: JSON.stringify(pulse.family)
+            family: JSON.stringify(pulse.family),
+            html: '<html>' + document.documentElement.innerHTML + '</html>'
         };
         // send save message to bg script
         chickenPox.main.chromePort.postMessage(data);
@@ -856,5 +877,55 @@ var chickenPox =  new function(){
             ele.find('*').css({'line-height': 'normal', 'box-sizing':'initial'});
         else if(type == 'circle')
             ele.css({'padding': '0px', 'margin':'0px'});
+    }
+
+    this.updateTimeSince = function() {
+        var dTag = 'data-pulse-ts';
+
+
+        $('[' + dTag + ']').each(function(i, span){
+            var date = $(span).attr(dTag);
+
+            if (typeof date !== 'object')
+                date = new Date(date);
+
+            var seconds = Math.floor((new Date() - date) / 1000);
+            var intervalType;
+
+            var interval = Math.floor(seconds / 31536000);
+            if (interval >= 1) {
+                intervalType = 'year';
+            } else {
+                interval = Math.floor(seconds / 2592000);
+                if (interval >= 1) {
+                    intervalType = 'month';
+                } else {
+                    interval = Math.floor(seconds / 86400);
+                    if (interval >= 1) {
+                        intervalType = 'day';
+                    } else {
+                        interval = Math.floor(seconds / 3600);
+                        if (interval >= 1) {
+                            intervalType = "hour";
+                        } else {
+                            interval = Math.floor(seconds / 60);
+                            if (interval >= 1) {
+                                intervalType = "minute";
+                            } else {
+                                interval = seconds;
+                                intervalType = "second";
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (interval > 1 || interval === 0) {
+                intervalType += 's';
+            }
+
+            var curr = interval + ' ' + intervalType + ' ago';
+            $(span).html(curr);
+        });
     }
 }
