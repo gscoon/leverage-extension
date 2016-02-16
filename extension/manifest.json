@@ -1,5 +1,5 @@
 {
-    "name": "__MSG_appName__",
+    "name": "Chicken Pox",
     "version": "0.0.1",
     "manifest_version": 2,
     "description": "__MSG_appDescription__",
@@ -22,9 +22,9 @@
             "19": "images/icon-19.png",
             "38": "images/icon-38.png"
         },
-        "default_title": "Pulse Social"
+        "default_title": "Chicken Pox"
     },
-    "options_page": "options.html",
+    "options_page": "html/options.html",
     "content_scripts": [
         {
             "matches": [
@@ -50,10 +50,10 @@
     ],
     "permissions": [
         "tabs",
+        "activeTab",
         "storage",
         "history",
-        "http://*/*",
-        "https://*/*"
+        "<all_urls>"
     ],
     "web_accessible_resources": [
         "images/*"

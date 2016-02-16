@@ -38,6 +38,12 @@ pointer-events: none;
     border-radius: 3px;
     line-height: normal;
     text-align: left;
+    box-sizing: border-box;
+}
+
+#tag_menu *, #tag_menu *:before, #tag_menu *:after
+{
+    box-sizing: border-box;
 }
 
 #tag_menu_nav
@@ -147,7 +153,6 @@ pointer-events: none;
 
 #tag_menu .button_row
 {
-    padding:15px 0 0;
 }
 
 #tag_menu .button_row a
@@ -260,7 +265,7 @@ input#pulse_comment_input::-webkit-input-placeholder{
 div.pulse_set_bar, div.pulse_set_circle
 {
     height:30px;
-    background-color:#993175;
+    background-color:#780808;
     position:absolute;
     z-index:99999999;
     margin:0; !important;
@@ -445,7 +450,7 @@ span.next_arrow
     font-size:13px;
 }
 
-#tag_menu_content, #tag_menu_who, #tag_menu_preview, #tag_menu_load_page, #tag_menu_chain
+#tag_menu_content, #tag_menu_who, #tag_menu_preview, #tag_menu_load_page, #tag_menu_chain, #tag_menu_save
 {
     display:none;
     width:295px;
