@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+    <head>
+        <title>ChickenPox</title>
+        <script type="text/javascript" src="/scripts/jquery.js"></script>
+        <script type="text/javascript" src="/scripts/popup.js"></script>
+        <script type="text/javascript" src="/scripts/util.js"></script>
+    </head>
+    <body>
+        <div id="menu">
+            <div id="popup_user_section">
+                <div id="popup_user_name"></div>
+                <div id="popup_user_image"></div>
+                <a id="popup_user_logout" >Logout</a>
+            </div>
+            <a class="popup_button show_tag" id="show_tag_button">Show Tags <span></span></a>
+            <div class="seperator show_tag"></div>
+            <a class="popup_button" id="tag_button">New Tag</a>
+            <div class="seperator"></div>
+            <a class="popup_button" id="feed_button">My Feed</a>
+        </div>
+        <style>
+            html, body{
+                padding:0;
+                margin:0;
+            }
+
+            #popup_user_section
+            {
+                min-height:100px;
+                padding:10px 0 0;
+                margin:0 0 5px;
+                border:#ccc solid;
+                border-width:0 0 1px;
+            }
+
+            #popup_user_image
+            {
+                width: 50px;
+                height: 50px;
+                border-radius: 25px;
+                background-size: cover;
+                background-position: 50%;
+                margin:10px auto;
+                box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.75);
+            }
+
+            #popup_user_logout
+            {
+                display:block;
+                color:#666;
+                font-size:13px;
+                text-align: center;
+                margin:0 0 5px;
+                cursor: pointer;
+            }
+
+            #popup_user_name
+            {
+                color:#333;
+                font-size:14px;
+                text-align: center;
+                font-weight: bold;
+            }
+
+            #menu
+            {
+                min-width:150px;
+            }
+
+            .popup_button {
+                display:block;
+                padding:3px 0 3px 5px;
+                cursor: pointer;
+                font-size: 13px;
+                border:#fff solid 1px;
+            }
+
+            .popup_button:hover{
+                background-color:#efefef;
+                border:#ccc solid 1px;
+            }
+
+            a.disabled
+            {
+                color:#aaa;
+                cursor: default;
+            }
+
+            a.disabled:hover
+            {
+                color:#aaa;
+                border:#fff solid 1px;
+                background-color: #fff;
+            }
+
+            .seperator
+            {
+                height:1px;
+                background-color:#ccc;
+                margin:3px 0;
+            }
+
+            .start_hidden
+            {
+                display:none;
+            }
+
+
+        </style>
+    </body>
+</html>

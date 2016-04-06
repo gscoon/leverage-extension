@@ -1,0 +1,268 @@
+div.pulse_set_bar, div.pulse_set_circle
+{
+    height:30px;
+    background-color:#780808;
+    position:absolute;
+    margin:0; !important;
+    padding-bottom:0; !important;
+}
+
+.pulse_set_bar
+{
+    opacity:.1;
+    left:-2000px;
+    width:4000px;
+}
+
+.pulse_set_circle
+{
+    width:30px;
+    border-radius: 50%;
+    opacity:.4;
+}
+
+#active_discussion_container
+{
+    background-color: #fff;
+    width:380px;
+    height:380px;
+    padding:10px;
+    position:fixed;
+    box-shadow: -2px 0px 5px 2px rgba(0,0,0,0.36);
+    display: none;
+    right:0;
+    top:50%;
+    margin:-200px 0 0;
+    border-radius: 4px 0 0 4px;
+    font-family: 'Open Sans';
+    box-sizing: initial;
+    -webkit-box-sizing: initial;
+}
+
+
+#active_discussion_op
+{
+	font-size:14px;
+	margin:0 0 5px;
+	padding:5px 0 10px;
+    margin:0;
+	color:#421332;
+    box-shadow: 0 5px 5px -5px rgba(0,0,0,0.45);
+    border:#bbb solid;
+    border-width:0;
+    position: relative;
+    z-index:inherit;
+}
+
+#active_discussion_chain
+{
+    padding:0;
+    color:#824d71;
+    border-bottom:1px dotted #cea4c0;
+}
+
+#active_discussion_meta
+{
+    padding:0 0 5px 0;
+    margin:0;
+    border:0;
+}
+
+#active_discussion_tagger
+{
+    display:inline-block;
+    width:60px;
+    padding:0;
+}
+
+#active_discussion_tagger img
+{
+    width:50px;
+    height:50px;
+    border-radius: 3px;
+}
+
+#active_discussion_meta_right
+{
+    display:inline-block;
+    vertical-align: top;
+    width:280px;
+}
+
+#active_discussion_name
+{
+    font-size:14px;
+    color:#444;
+    padding:0;
+}
+
+.active_discussion_meta_row
+{
+    color:#999;
+    font-size:12px;
+    width:280px;
+    height:14px;
+    overflow: hidden;
+    padding:0 0 2px;
+}
+
+#active_discussion_url, #active_discussion_time
+{
+}
+
+#active_discussion_url
+{
+    padding:0;
+}
+
+
+#active_discussion_response
+{
+    position:absolute;
+    bottom:10px;
+    left:10px;
+    padding:10px 0 0 40px;
+    border:#bbb solid;
+    border-width:1px 0 0;
+    width:340px;
+    background-color:#fff;
+    box-shadow: 0 -5px 5px -5px rgba(0,0,0,0.45);
+}
+
+#active_discussion_no_comments
+{
+    background-image: url('chrome-extension://__MSG_@@extension_id__/images/no_comments.png');
+    width:131px;
+    height:15px;
+    position:absolute;
+    left:50%;
+    top:50%;
+    margin:-7px 0 0 -65px;
+}
+
+#active_discussion_response_img
+{
+    position: absolute;
+    left:5px;
+    top:12px;
+}
+
+#active_discussion_comment_outer
+{
+    overflow-y: auto;
+    position: relative;
+}
+
+input#active_discussion_response_input::-webkit-input-placeholder{
+    color:#999;
+}
+
+input#active_discussion_response_input
+{
+    width:330px; !important;
+    font-size:13px; !important;
+    border:1px solid #ccc; !important;
+    height:25px; !important;
+    padding: 2px 2px 2px 5px; !important;
+    margin:0; !important;
+    font-family: 'Open Sans'; !important;
+    font-size:13px; !important;
+}
+
+.active_discussion_comment_image
+{
+    position:absolute;
+    left:5px;
+    top:10px;
+}
+
+.active_discussion_commentor
+{
+    font-weight: 500;
+    padding:0 3px 0 0;
+    color:#444;
+    font-size:13px;
+}
+
+.active_discussion_comment_row
+{
+    padding:7px 0 7px 38px;
+    position:relative;
+    border:#fff solid;
+    border-width:0 0 1px;
+    background-color:#FFF4FC;
+}
+
+.active_discussion_comment_body
+{
+    color:#444;
+    font-size:13px;
+}
+
+.active_discussion_comment_container
+{
+
+}
+
+#active_discussion_comment_template
+{
+    display:none;
+}
+
+.active_discussion_comment_details
+{
+    padding:2px 0 0;
+}
+
+.active_discussion_comment_ts
+{
+    color:#666;
+    font-size:11px;
+}
+
+a#active_discussion_x
+{
+    background-image:url('chrome-extension://__MSG_@@extension_id__/images/discussion_x.png');
+    height:11px;
+    width:12px;
+    cursor:pointer;
+    position:absolute;
+    top:10px;
+    right:10px;
+}
+
+#active_discussion_menu
+{
+    position:absolute;
+    right:35px;
+    top:0px;
+    width:100px;
+    background-color: #efefef;
+    border:1px solid #ccc;
+    display:none;
+}
+
+#active_discussion_menu a
+{
+    display:block;
+    text-decoration: none;
+    font-size:12px;
+    color:#216a7c;
+    padding:3px;
+}
+
+#active_discussion_menu a:hover
+{
+    background-color:#ccc;
+}
+
+a#active_discussion_arrow
+{
+    background-image:url('chrome-extension://__MSG_@@extension_id__/images/discussion_arrow.png');
+    height:9px;
+    width:13px;
+    cursor:pointer;
+    position:absolute;
+    top:10px;
+    right:40px;
+}

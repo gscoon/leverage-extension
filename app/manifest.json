@@ -1,0 +1,63 @@
+{
+    "name": "ChickenPox",
+    "version": "0.0.2",
+    "manifest_version": 2,
+    "description": "Targeted conversations on web content.",
+    "icons": {
+        "16": "images/icons/icon-16.png",
+        "19": "images/icons/icon-19.png",
+        "38": "images/icons/icon-38.png",
+        "128": "images/icons/icon-128.png"
+    },
+    "default_locale": "en",
+    "background": {
+        "scripts": [
+            "scripts/jquery.js",
+            "scripts/bg.socket.io.js",
+            "scripts/moment.min.js",
+            "scripts/util.js",
+            "scripts/bg.js"
+        ]
+    },
+    "browser_action": {
+        "default_icon": {
+            "38": "images/icons/icon-38.png"
+        },
+        "default_title": "ChickenPox"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "http://*/*",
+                "https://*/*"
+            ],
+            "js": [
+                "scripts/jquery.js",
+                "scripts/cs.jPulse.js",
+                "scripts/cs.pox.js",
+                "scripts/menu.js",
+                "scripts/moment.min.js",
+                "scripts/jquery.pep.js",
+                "scripts/box.js"
+            ],
+            "css": [
+                "styles/style.css",
+                "styles/box.css",
+                "styles/discussion.css"
+            ],
+            "run_at": "document_end",
+            "all_frames": false
+        }
+    ],
+    "permissions": [
+        "tabs",
+        "activeTab",
+        "storage",
+        "history",
+        "<all_urls>"
+    ],
+    "web_accessible_resources": [
+        "images/*"
+    ],
+	"content_security_policy" : "script-src 'self' https://www.facebook.com https://connect.facebook.net; object-src 'self'"
+}
