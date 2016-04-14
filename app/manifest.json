@@ -1,6 +1,6 @@
 {
     "name": "ChickenPox",
-    "version": "0.0.2",
+    "version": "0.0.4",
     "manifest_version": 2,
     "description": "Targeted conversations on web content.",
     "icons": {
@@ -14,7 +14,7 @@
         "scripts": [
             "scripts/jquery.js",
             "scripts/bg.socket.io.js",
-            "scripts/moment.min.js",
+            "scripts/moment.js",
             "scripts/util.js",
             "scripts/bg.js"
         ]
@@ -36,12 +36,13 @@
                 "scripts/cs.jPulse.js",
                 "scripts/cs.pox.js",
                 "scripts/menu.js",
-                "scripts/moment.min.js",
+                "scripts/moment.js",
                 "scripts/jquery.pep.js",
                 "scripts/box.js"
             ],
             "css": [
                 "styles/style.css",
+                "styles/menu.css",
                 "styles/box.css",
                 "styles/discussion.css"
             ],

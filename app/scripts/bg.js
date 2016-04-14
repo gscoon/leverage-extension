@@ -146,7 +146,8 @@ function handleTabUpdate(tabId, changeInfo, tab){
 		});
 
 	// call for page tags
-	getPageTags(tab);
+	if(config.user && config.user.isLoggedIn)
+		getPageTags(tab);
 }
 
 // clean up when tab is closed.
@@ -158,7 +159,6 @@ function tabClosedHandler(tabID){
 }
 
 function getPoxMenu(){
-	//var menuURL = config.domain.default + '/tag-menu';
 	var menuURL = chrome.extension.getURL('html/tag-menu.html');
 	$.get(menuURL, function(m){
 		config.menuHTML = m;
@@ -343,7 +343,7 @@ function setUser(response){
 
 function showLoginWindow(){
 	chrome.windows.create({
-		url: 'http://login.chickenpox.io/login_menu',
+		url: '/html/login.html',
 		type: 'popup',
 		width: 800,
 		height :800

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script src="/scripts/jquery.js"></script>
+        <title>Chicken Pox - Login</title>
+    </head>
+    <body>
+        <div id="general_overlay"></div>
+        <div id="force_login_menu">
+            <div style="padding:0 0 10px;">
+                <img src="/images/logo.gif">
+            </div>
+            <span>Please log in to continue</span>
+            <a id="force_login_button" class="login_button" href="http://login.chickenpox.io/facebook"></a>
+        </div>
+        <style>
+            html,body
+            {
+                font-family: "Open Sans";
+
+            }
+            .login_button
+            {
+                position:absolute;
+                display:block;
+                cursor:pointer;
+                background-image:url(/images/login.png);
+                width:113px;
+                height:25px;
+            }
+
+            #main_login_button
+            {
+                margin:-12px 0 0;
+                top:50%;
+                right:0;
+            }
+
+            #force_login_button
+            {
+                bottom:40px;
+                left:50%;
+                margin:-12px 0 0 -56px;
+            }
+
+            #force_login_menu
+            {
+                position:fixed;
+                width:400px;
+                height:200px;
+                left:50%;
+                top:50%;
+                margin:-100px 0 0 -200px;
+                background-color:#fff;
+                text-align: center;
+                padding:20px 0 0;
+                border:#444 solid 3px;
+                border-radius: 5px;
+                color:#555;
+                z-index:111;
+                font-size:14px;
+                box-sizing: border-box;
+            }
+
+            #general_overlay
+            {
+                background-color:#000;
+                opacity:.5;
+                position:fixed;
+                left:0;
+                top:0;
+                width:100%;
+                height:100%;
+                z-index:110;
+            }
+        </style>
+    </body>
+</html>
